@@ -32,7 +32,7 @@ img { max-width: 100%; }
 .scroll-sequence { height: 420vh; background: #080808; position: relative; }
 .sequence-sticky { position: sticky; top: 0; height: 100vh; overflow: hidden; background: #080808; }
 .sequence-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; user-select: none; }
-.sequence-vignette { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.84) 0%, rgba(0,0,0,.24) 48%, rgba(0,0,0,.18)), linear-gradient(0deg, rgba(0,0,0,.6), transparent 45%); pointer-events: none; }
+.sequence-vignette { display: none; }
 .sequence-progress { position: absolute; left: 3vw; right: 3vw; bottom: 18px; height: 1px; background: rgba(255,255,255,.3); }
 .sequence-progress span { display: block; height: 100%; background: var(--accent); transform-origin: left; }
 .hero-copy { position: absolute; left: clamp(1.5rem, 6vw, 7rem); top: 50%; transform: translateY(-47%); color: white; max-width: 850px; z-index: 2; }
