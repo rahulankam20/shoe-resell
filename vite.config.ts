@@ -74,16 +74,9 @@ function apiDevPlugin(): Plugin {
   };
 }
 
-export default defineConfig(async ({ mode }) => {
+export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   Object.assign(process.env, env);
-
-  const plugins: any[] = [react(), tailwindcss(), apiDevPlugin()];
-  try {
-    // @ts-ignore
-    const m = await import('./.vite-source-tags.js');
-    plugins.push(m.sourceTags());
-  } catch {}
 
   const processEnvDefines: Record<string, string> = {};
   for (const [key, value] of Object.entries(env)) {
@@ -93,7 +86,7 @@ export default defineConfig(async ({ mode }) => {
   }
 
   return {
-    plugins,
+    plugins: [react(), tailwindcss(), apiDevPlugin()],
     envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
     define: processEnvDefines,
   };
