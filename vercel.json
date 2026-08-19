@@ -1,0 +1,26 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/orders.js": {
+      "maxDuration": 15
+    },
+    "api/payments.js": {
+      "maxDuration": 15
+    },
+    "api/cashfree-webhook.js": {
+      "maxDuration": 15
+    },
+    "api/reconcile.js": {
+      "maxDuration": 15
+    }
+  }
+}
