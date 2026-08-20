@@ -42,9 +42,12 @@ export function cors(res, req, methods) {
 }
 
 export function clientIp(req) {
-  const forwarded = req.headers['x-forwarded-for'];
+  const headers = req?.headers || {};
+  const realIp = headers['x-real-ip'] || headers['x-vercel-forwarded-for'];
+  if (typeof realIp === 'string' && realIp.trim()) return realIp.trim();
+  const forwarded = headers['x-forwarded-for'];
   if (typeof forwarded === 'string' && forwarded.length) return forwarded.split(',')[0].trim();
-  return req.socket?.remoteAddress || req.headers['x-real-ip'] || 'unknown';
+  return req?.socket?.remoteAddress || 'unknown';
 }
 
 export function appBaseUrl(req) {

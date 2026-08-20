@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { captureStock, releaseStock, syncProductStockDisplay } from './inventory.js';
 import { writeAudit } from './audit.js';
 import {
@@ -27,6 +28,7 @@ function paymentMapKey(cfPaymentId, orderId) {
 
 export async function recordWebhookEvent(db, { parsed, rawBody, verified, source }) {
   const dedupKey = webhookDedupKey(parsed);
+  const rawBodyHash = crypto.createHash('sha256').update(String(rawBody || '')).digest('hex');
   const inserted = await db.insertWebhookEvent({
     dedup_key: dedupKey,
     event_type: parsed.type || 'UNKNOWN',
@@ -36,7 +38,7 @@ export async function recordWebhookEvent(db, { parsed, rawBody, verified, source
     signature_valid: Boolean(verified),
     source: source || 'webhook',
     payload: parsed.payload || {},
-    raw_body_hash: String(rawBody || '').slice(0, 64),
+    raw_body_hash: rawBodyHash,
     created_at: new Date().toISOString(),
   });
   return { dedupKey, duplicate: !inserted };
@@ -109,15 +111,19 @@ export async function settleSuccessfulPayment(db, { order, parsed, source }) {
   }
 
   const claimKey = paymentMapKey(parsed.cfPaymentId, order.order_number);
-  await db.claimPaymentId({
+  const claimed = await db.claimPaymentId({
     cf_payment_id: claimKey,
     order_id: order.id,
     user_id: order.user_id,
     created_at: new Date().toISOString(),
   });
+  if (!claimed) {
+    const latest = await db.getOrder(order.id);
+    return { status: latest?.payment_status === PaymentState.PAID ? 'already_paid' : 'in_flight', order: latest || order };
+  }
 
+  const items = await db.getOrderItems(order.id);
   try {
-    const items = await db.getOrderItems(order.id);
     if (items?.length) {
       await captureStock(db, items.map((item) => ({
         productId: item.product_id,
@@ -127,7 +133,14 @@ export async function settleSuccessfulPayment(db, { order, parsed, source }) {
       await syncProductStockDisplay(db, items.map((item) => item.product_id));
     }
   } catch (error) {
-    console.error('Stock capture non-fatal warning during payment capture:', error?.message);
+    await writeAudit(db, {
+      action: 'PAYMENT_STOCK_CAPTURE_FAILED',
+      entityType: 'order',
+      entityId: order.id,
+      orderId: order.id,
+      metadata: { message: error.message, code: error.code, source },
+    });
+    throw error;
   }
 
   const payment = await db.insertPayment({

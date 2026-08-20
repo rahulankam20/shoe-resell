@@ -17,15 +17,12 @@ export default async function handler(req, res) {
   const timestamp = req.headers['x-webhook-timestamp'];
   const cfg = cashfreeConfig();
 
-  const mockAllowed = cfg.environment === 'MOCK' && req.headers['x-mock-webhook'] === 'solevault';
-  const verified = mockAllowed
-    ? { ok: true }
-    : verifyWebhookSignature({
-      signature,
-      timestamp,
-      rawBody,
-      secret: cfg.webhookSecret,
-    });
+  const verified = verifyWebhookSignature({
+    signature,
+    timestamp,
+    rawBody,
+    secret: cfg.webhookSecret,
+  });
 
   if (!verified.ok) {
     console.error('Cashfree webhook rejected:', verified.reason);
