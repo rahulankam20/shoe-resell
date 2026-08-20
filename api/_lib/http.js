@@ -48,11 +48,14 @@ export function clientIp(req) {
 }
 
 export function appBaseUrl(req) {
+  const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host;
+  if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+    const proto = req.headers?.['x-forwarded-proto'] || 'https';
+    return `${proto}://${host}`;
+  }
   const envUrl = process.env.APP_BASE_URL || process.env.CASHFREE_APP_URL;
   if (envUrl) return envUrl.replace(/\/$/, '');
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:5173';
-  return `${proto}://${host}`;
+  return 'http://localhost:5173';
 }
 
 function bufferRequest(req) {
