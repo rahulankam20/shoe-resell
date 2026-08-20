@@ -1,4 +1,4 @@
-import supabase from './db-client.js';
+import supabase from './_lib/db-client.js';
 import { applySecurityHeaders } from './_lib/http.js';
 import { requireAdmin } from './_lib/auth.js';
 import db from './_lib/db.js';
