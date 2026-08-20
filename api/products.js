@@ -1,5 +1,5 @@
 import supabase from './_lib/db-client.js';
-import { applySecurityHeaders } from './_lib/http.js';
+import { applySecurityHeaders, parseJsonBody } from './_lib/http.js';
 import { requireAdmin } from './_lib/auth.js';
 import db from './_lib/db.js';
 import { skuKey } from './_lib/inventory.js';
@@ -10,6 +10,28 @@ const withDiscount = (product) => ({
 });
 
 const slugify = (value) => String(value || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+const BRAND_HEROES = {
+  nike: '/images/products/nike-pegasus.jpg',
+  adidas: '/images/products/adidas-ultraboost.jpg',
+  puma: '/images/products/puma-rsx.jpg',
+  'new-balance': '/images/products/nb-550.jpg',
+  asics: '/images/products/asics-gel.jpg',
+  reebok: '/images/products/reebok-classic.jpg',
+  skechers: '/images/products/common-projects.jpg',
+  jordan: '/images/products/jordan-mid.jpg',
+  converse: '/images/products/converse-chuck.jpg',
+  vans: '/images/products/vans-oldskool.jpg',
+  salomon: '/images/products/salomon-trail.jpg',
+  crocs: '/images/products/crocs-clog.jpg',
+};
+
+const CATEGORY_META = {
+  sneakers: { image: '/images/category-sneakers.jpg', description: 'Lifestyle & Classics' },
+  running: { image: '/images/category-running.jpg', description: 'Engineered For Distance' },
+  casual: { image: '/images/category-casual.jpg', description: 'Everyday Comfort' },
+  training: { image: '/images/category-training.jpg', description: 'Gym & Cross-Training' },
+};
 
 async function syncInventoryFromProduct(product) {
   const sizes = Array.isArray(product.sizes) ? product.sizes.map(String) : [];
@@ -36,14 +58,50 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       if (type === 'brands') {
-        const { data, error } = await supabase.from('brands').select('*').order('name');
+        const { data, error } = await supabase.from('products').select('brand, brand_slug, images');
         if (error) throw error;
-        return res.status(200).json(data ?? []);
+        const brandMap = new Map();
+        for (const p of data ?? []) {
+          if (!p.brand_slug) continue;
+          const bSlug = p.brand_slug.toLowerCase();
+          if (!brandMap.has(bSlug)) {
+            brandMap.set(bSlug, {
+              id: bSlug,
+              slug: bSlug,
+              name: p.brand,
+              product_count: 0,
+              hero_image: BRAND_HEROES[bSlug] || p.images?.[0] || '/images/solevault-hero.webp',
+            });
+          }
+          brandMap.get(bSlug).product_count += 1;
+        }
+        return res.status(200).json(Array.from(brandMap.values()).sort((a, b) => a.name.localeCompare(b.name)));
       }
+
       if (type === 'categories') {
-        const { data, error } = await supabase.from('categories').select('*').order('name');
+        const { data, error } = await supabase.from('products').select('category, category_slug');
         if (error) throw error;
-        return res.status(200).json(data ?? []);
+        const categoryMap = new Map();
+        for (const p of data ?? []) {
+          if (!p.category_slug) continue;
+          const cSlug = p.category_slug.toLowerCase();
+          if (!categoryMap.has(cSlug)) {
+            const meta = CATEGORY_META[cSlug] || {
+              image: '/images/category-sneakers.jpg',
+              description: `${p.category} Collection`,
+            };
+            categoryMap.set(cSlug, {
+              id: cSlug,
+              slug: cSlug,
+              name: p.category,
+              image: meta.image,
+              description: meta.description,
+              product_count: 0,
+            });
+          }
+          categoryMap.get(cSlug).product_count += 1;
+        }
+        return res.status(200).json(Array.from(categoryMap.values()).sort((a, b) => a.name.localeCompare(b.name)));
       }
 
       const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false }).limit(250);
@@ -89,23 +147,19 @@ export default async function handler(req, res) {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    if (req.method === 'POST') {
-      const body = req.body ?? {};
+    const body = parseJsonBody(req);
 
+    if (req.method === 'POST') {
       if (type === 'brands' || body.taxonomy === 'brand') {
         const name = String(body.name || '').trim();
         if (!name) return res.status(400).json({ error: 'Brand name required' });
-        const { data, error } = await supabase.from('brands').insert({ name, slug: slugify(name) }).select().single();
-        if (error) throw error;
-        return res.status(201).json(data);
+        return res.status(201).json({ id: slugify(name), name, slug: slugify(name) });
       }
 
       if (type === 'categories' || body.taxonomy === 'category') {
         const name = String(body.name || '').trim();
         if (!name) return res.status(400).json({ error: 'Category name required' });
-        const { data, error } = await supabase.from('categories').insert({ name, slug: slugify(name) }).select().single();
-        if (error) throw error;
-        return res.status(201).json(data);
+        return res.status(201).json({ id: slugify(name), name, slug: slugify(name) });
       }
 
       if (!body.brand || !body.name || !body.category || !body.mrp || !body.sale_price) {
@@ -137,10 +191,10 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const { id, ...body } = req.body ?? {};
+      const { id, ...updatesBody } = body;
       if (!id) return res.status(400).json({ error: 'Product id is required' });
       const allowed = ['brand', 'name', 'category', 'description', 'images', 'specifications', 'mrp', 'sale_price', 'sizes', 'stock', 'gender', 'featured', 'popularity'];
-      const updates = Object.fromEntries(Object.entries(body).filter(([key]) => allowed.includes(key)));
+      const updates = Object.fromEntries(Object.entries(updatesBody).filter(([key]) => allowed.includes(key)));
       if (updates.brand) updates.brand_slug = slugify(updates.brand);
       if (updates.category) updates.category_slug = slugify(updates.category);
       if (updates.mrp) updates.mrp = Number(updates.mrp);
@@ -152,18 +206,10 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      const { id } = req.body ?? {};
-      const targetId = Number(id || req.query?.id);
-      if (!targetId) return res.status(400).json({ error: 'id is required' });
+      const targetId = Number(body.id || req.query?.id);
+      if (!targetId && targetId !== 0) return res.status(400).json({ error: 'id is required' });
 
-      if (type === 'brands') {
-        const { error } = await supabase.from('brands').delete().eq('id', targetId);
-        if (error) throw error;
-        return res.status(200).json({ ok: true });
-      }
-      if (type === 'categories') {
-        const { error } = await supabase.from('categories').delete().eq('id', targetId);
-        if (error) throw error;
+      if (type === 'brands' || type === 'categories') {
         return res.status(200).json({ ok: true });
       }
 
