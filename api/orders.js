@@ -3,6 +3,7 @@ import { requireUser, isAdmin } from './_lib/auth.js';
 import { enforceRateLimit } from './_lib/rateLimit.js';
 import db from './_lib/db.js';
 import { createCashfreeOrder } from './_lib/cashfree.js';
+import { reconcileOrder } from './_lib/settlement.js';
 import { reserveStock, releaseStock, syncProductStockDisplay } from './_lib/inventory.js';
 import { writeAudit } from './_lib/audit.js';
 import { PaymentState, FulfillmentState, assertFulfillmentTransition } from './_lib/state.js';
@@ -337,9 +338,19 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const adminView = req.query?.admin === 'true' && await isAdmin(user);
       if (req.query?.id) {
-        const order = await db.getOrder(req.query.id);
+        let order = await db.getOrder(req.query.id);
         if (!order) return res.status(404).json({ error: 'Order not found' });
         if (!adminView && order.user_id !== user.id) return res.status(404).json({ error: 'Order not found' });
+
+        if (order.payment_status === PaymentState.PAYMENT_PENDING) {
+          try {
+            await reconcileOrder(db, order, 'auto_get_order');
+            order = (await db.getOrder(order.id)) || order;
+          } catch (recErr) {
+            console.error('Auto reconcile on GET /api/orders error:', recErr?.message);
+          }
+        }
+
         const [items, payments, refunds] = await Promise.all([
           db.getOrderItems(order.id),
           db.listPayments(order.id),
@@ -347,7 +358,15 @@ export default async function handler(req, res) {
         ]);
         return res.status(200).json({ ...publicOrder(order), items, payments, refunds });
       }
-      const rows = await db.listOrders({ userId: user.id, admin: adminView });
+      let rows = await db.listOrders({ userId: user.id, admin: adminView });
+      
+      // Auto-reconcile pending orders in recent list
+      const pendingRows = rows.filter((r) => r.payment_status === PaymentState.PAYMENT_PENDING).slice(0, 3);
+      if (pendingRows.length) {
+        await Promise.allSettled(pendingRows.map((r) => reconcileOrder(db, r, 'auto_list_orders')));
+        rows = await db.listOrders({ userId: user.id, admin: adminView });
+      }
+
       return res.status(200).json((await attachItems(rows)).map(publicOrder));
     }
 
