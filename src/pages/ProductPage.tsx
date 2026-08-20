@@ -5,6 +5,7 @@ import { ErrorState, LoadingState } from '../components/StatePanel';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { authHeaders, money } from '../lib/format';
+import { getProductImage, handleImageError } from '../lib/images';
 import type { Product } from '../types';
 
 export default function ProductPage() {
@@ -35,10 +36,34 @@ export default function ProductPage() {
   const add = (buyNow = false) => { if (!validateSize()) return; addItem(product, size, quantity); if (buyNow) navigate('/checkout'); else setMessage('Added to your cart'); };
   const wish = async () => { if (!user) { navigate('/login'); return; } const response = await fetch('/api/wishlist', { method: 'POST', headers: await authHeaders(), body: JSON.stringify({ product_id: product.id, size: size || null }) }); setMessage(response.ok ? 'Saved to your wishlist' : 'Could not update wishlist'); };
 
+  const mainImageSrc = getProductImage(product, selectedImage);
+
   return <div className="product-page page-shell">
     <Link className="back-link" to="/shop"><ArrowLeft size={16} /> Back to collection</Link>
     <div className="product-detail-grid">
-      <section className="gallery"><div className="gallery-main"><img src={product.images[selectedImage]} alt={`${product.brand} ${product.name}, view ${selectedImage + 1}`} /></div>{product.images.length > 1 && <div className="thumbnails">{product.images.map((image, index) => <button className={index === selectedImage ? 'active' : ''} key={image} onClick={() => setSelectedImage(index)}><img src={image} alt={`View ${index + 1}`} loading="lazy" /></button>)}</div>}</section>
+      <section className="gallery">
+        <div className="gallery-main">
+          <img
+            src={mainImageSrc}
+            alt={`${product.brand} ${product.name}, view ${selectedImage + 1}`}
+            onError={(e) => handleImageError(e, '/images/solevault-hero.webp')}
+          />
+        </div>
+        {product.images.length > 1 && (
+          <div className="thumbnails">
+            {product.images.map((image, index) => (
+              <button className={index === selectedImage ? 'active' : ''} key={image} onClick={() => setSelectedImage(index)}>
+                <img
+                  src={getProductImage(product, index)}
+                  alt={`View ${index + 1}`}
+                  loading="lazy"
+                  onError={(e) => handleImageError(e, '/images/solevault-hero.webp')}
+                />
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
       <section className="product-buy-panel"><p className="eyebrow accent">{product.brand} · {product.category}</p><h1>{product.name}</h1><p className="detail-description">{product.description}</p><div className="detail-price"><strong>{money(product.sale_price)}</strong><s>{money(product.mrp)}</s><span>{product.discount}% OFF</span></div><p className="tax-note">Inclusive of all taxes · MRP shown for comparison</p>
         <div className="size-head"><label>Select UK size</label><span>{available.length} sizes available</span></div><div className="size-selector">{product.sizes.map((entry) => <button key={entry} disabled={!available.includes(entry)} className={size === entry ? 'selected' : ''} onClick={() => { setSize(entry); setMessage(''); }}>{entry}</button>)}</div>
         <div className="quantity-row"><label htmlFor="quantity">Quantity</label><select id="quantity" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))}>{[1, 2, 3, 4, 5].map((value) => <option key={value}>{value}</option>)}</select>{size && <span>{product.stock[size]} left in this size</span>}</div>

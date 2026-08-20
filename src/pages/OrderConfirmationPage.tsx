@@ -9,6 +9,9 @@ import type { Order } from '../types';
 export default function OrderConfirmationPage() {
   const { id } = useParams();
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const targetId = id || searchParams.get('order_id') || searchParams.get('order_number') || searchParams.get('orderNumber');
+
   const { clearCart } = useCart();
   const seeded = (location.state as { order?: Order } | null)?.order;
   const [order, setOrder] = useState<Order | null>(seeded || null);
@@ -17,10 +20,10 @@ export default function OrderConfirmationPage() {
   const [checking, setChecking] = useState(false);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!targetId) return;
     setError('');
     try {
-      const response = await fetch(`/api/orders?id=${encodeURIComponent(id)}`, { headers: await authHeaders() });
+      const response = await fetch(`/api/orders?id=${encodeURIComponent(targetId)}`, { headers: await authHeaders() });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Unable to load order');
       setOrder(data);
@@ -30,16 +33,16 @@ export default function OrderConfirmationPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, clearCart]);
+  }, [targetId, clearCart]);
 
   const reconcile = async () => {
-    if (!id) return;
+    if (!targetId && !order?.id) return;
     setChecking(true);
     try {
       await fetch('/api/payments?action=reconcile', {
         method: 'POST',
         headers: await authHeaders(),
-        body: JSON.stringify({ order_id: Number(id), action: 'reconcile' }),
+        body: JSON.stringify({ order_id: order?.id || targetId, action: 'reconcile' }),
       });
       await load();
     } finally {
@@ -52,13 +55,13 @@ export default function OrderConfirmationPage() {
       // Auto reconcile once on mount if pending
       reconcile();
     });
-  }, [id]);
+  }, [targetId]);
 
   useEffect(() => {
     if (!order || order.payment_status !== 'PAYMENT_PENDING') return;
     const timer = window.setInterval(reconcile, 3000);
     return () => window.clearInterval(timer);
-  }, [order?.payment_status, id]);
+  }, [order?.payment_status, targetId]);
 
   if (loading) return <div className="page-shell"><LoadingState label="Confirming payment with the server" /></div>;
 
@@ -74,7 +77,7 @@ export default function OrderConfirmationPage() {
     {error && <p className="form-error" role="alert">{error}</p>}
     <div className="confirmation-card">
       <PackageCheck />
-      <div><span>Order reference</span><strong>{order?.order_number || `Order #${id}`}</strong></div>
+      <div><span>Order reference</span><strong>{order?.order_number || `Order #${targetId}`}</strong></div>
       {order && <div><span>Order total</span><strong>{money(order.total)}</strong></div>}
       <div><span>Payment</span><strong>{order?.payment_status || 'UNKNOWN'}</strong></div>
     </div>

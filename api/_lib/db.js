@@ -7,8 +7,14 @@ function isUniqueViolation(error) {
 
 export function createSupabaseDb(client = supabase) {
   return {
-    async getOrder(id) {
-      const { data, error } = await client.from('orders').select('*').eq('id', Number(id)).maybeSingle();
+    async getOrder(idOrNumber) {
+      if (!idOrNumber) return null;
+      if (typeof idOrNumber === 'number' || /^\d+$/.test(String(idOrNumber))) {
+        const { data, error } = await client.from('orders').select('*').eq('id', Number(idOrNumber)).maybeSingle();
+        if (error) throw error;
+        if (data) return data;
+      }
+      const { data, error } = await client.from('orders').select('*').eq('order_number', String(idOrNumber)).maybeSingle();
       if (error) throw error;
       return data;
     },
