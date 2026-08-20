@@ -39,12 +39,17 @@ export default async function handler(req, res) {
     if (req.method === 'PUT') {
       if (isProfileScope || req.body?.full_name !== undefined) {
         const { full_name = '', phone = '' } = req.body ?? {};
+        const sanitizedName = String(full_name).trim().slice(0, 100);
+        const sanitizedPhone = String(phone).replace(/\D/g, '').slice(0, 15);
+        if (sanitizedName.length > 0 && sanitizedName.length < 2) {
+          return res.status(400).json({ error: 'Full name must be at least 2 characters' });
+        }
         const { data: current } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
         const { data, error } = await supabase.from('profiles').upsert({
           id: user.id,
           email: user.email,
-          full_name,
-          phone,
+          full_name: sanitizedName,
+          phone: sanitizedPhone,
           role: current?.role || 'customer',
         }, { onConflict: 'id', ignoreDuplicates: false }).select().single();
         if (error) throw error;

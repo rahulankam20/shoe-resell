@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
+// SECURITY: Credentials are configured via environment variables.
+// Set SOLEVAULT_ADMIN_EMAIL, SOLEVAULT_ADMIN_PASSWORD, SOLEVAULT_DEMO_EMAIL, SOLEVAULT_DEMO_PASSWORD
+// as environment variables before running this script.
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -8,11 +12,25 @@ const supabase = createClient(
 
 async function setupUsers() {
   const users = [
-    { email: 'admin@solevault.in', password: 'Admin@Sole2025', fullName: 'SoleVault Admin', role: 'admin' },
-    { email: 'demo@solevault.in', password: 'Demo@Sole2025', fullName: 'Demo User', role: 'customer' }
+    {
+      email: process.env.SOLEVAULT_ADMIN_EMAIL || '',
+      password: process.env.SOLEVAULT_ADMIN_PASSWORD || '',
+      fullName: 'SoleVault Admin',
+      role: 'admin',
+    },
+    {
+      email: process.env.SOLEVAULT_DEMO_EMAIL || '',
+      password: process.env.SOLEVAULT_DEMO_PASSWORD || '',
+      fullName: 'Demo User',
+      role: 'customer',
+    },
   ];
 
   for (const u of users) {
+    if (!u.email || !u.password) {
+      console.error(`Skipping user with missing credentials. Set SOLEVAULT_${u.role === 'admin' ? 'ADMIN' : 'DEMO'}_EMAIL and SOLEVAULT_${u.role === 'admin' ? 'ADMIN' : 'DEMO'}_PASSWORD environment variables.`);
+      continue;
+    }
     console.log('\n--- Provisioning:', u.email, '---');
     
     // First, list existing users to see if it exists

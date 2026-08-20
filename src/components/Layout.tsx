@@ -263,13 +263,19 @@ export default function Layout() {
           <div>
             <h3>Help</h3>
             <Link to="/account">My account</Link>
-            <Link to="/cart">Shipping & returns</Link>
-            <Link to="/account">Order status</Link>
+            <Link to="/shipping-policy">Shipping policy</Link>
+            <Link to="/refund-policy">Returns & refunds</Link>
           </div>
           <div>
             <h3>Our promise</h3>
             <p>Every pair is brand new, quality checked and sourced for authenticity.</p>
           </div>
+        </div>
+        <div className="footer-legal">
+          <Link to="/privacy-policy">Privacy Policy</Link>
+          <Link to="/terms-of-service">Terms of Service</Link>
+          <Link to="/refund-policy">Refund Policy</Link>
+          <Link to="/shipping-policy">Shipping Policy</Link>
         </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} SOLEVAULT</span>

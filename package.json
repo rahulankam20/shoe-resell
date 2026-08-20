@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test server/__tests__/payment.test.js server/__tests__/webhook-raw-body.test.js"
+    "test": "node --test server/__tests__/payment.test.js server/__tests__/webhook-raw-body.test.js server/__tests__/security.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.1",

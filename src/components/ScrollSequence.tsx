@@ -53,55 +53,6 @@ export default function ScrollSequence({
     return () => mediaQuery.removeEventListener('change', handler);
   }, []);
 
-  // Preload and decode all frames
-  useEffect(() => {
-    let isMounted = true;
-    const images: HTMLImageElement[] = [];
-    imagesRef.current = images;
-
-    let loaded = 0;
-
-    const handleSingleLoad = (img: HTMLImageElement, index: number) => {
-      if (!isMounted) return;
-      images[index] = img;
-      loaded += 1;
-      setLoadedCount(loaded);
-
-      // Once the first frame is ready, we can immediately render it
-      if (index === 0 && canvasRef.current) {
-        drawFrame(0);
-      }
-
-      if (loaded === frameCount) {
-        setIsReady(true);
-      }
-    };
-
-    for (let i = 0; i < frameCount; i++) {
-      const img = new Image();
-      img.src = getFrameUrl(basePath, prefix, i, pad, format);
-
-      img.onload = () => {
-        if ('decode' in img && typeof img.decode === 'function') {
-          img.decode()
-            .then(() => handleSingleLoad(img, i))
-            .catch(() => handleSingleLoad(img, i));
-        } else {
-          handleSingleLoad(img, i);
-        }
-      };
-
-      img.onerror = () => {
-        if (i === 0) setLoadError(true);
-        handleSingleLoad(img, i);
-      };
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [frameCount, basePath, prefix, pad, format]);
-
   // Draw frame to canvas with cover scaling
   const drawFrame = useCallback((frameIndex: number) => {
     const canvas = canvasRef.current;
@@ -110,6 +61,7 @@ export default function ScrollSequence({
     const img = imagesRef.current[frameIndex] || imagesRef.current[0];
     if (!img || !img.complete || img.naturalWidth === 0) return;
 
+    // Skip redundant redraws
     if (lastDrawnIndexRef.current === frameIndex && canvas.width > 0) {
       return;
     }
@@ -124,8 +76,10 @@ export default function ScrollSequence({
 
     if (width === 0 || height === 0) return;
 
-    const displayWidth = Math.round(width * dpr);
-    const displayHeight = Math.round(height * dpr);
+    // Cap DPR at 2 for performance (3x+ screens get diminishing returns)
+    const effectiveDpr = Math.min(dpr, 2);
+    const displayWidth = Math.round(width * effectiveDpr);
+    const displayHeight = Math.round(height * effectiveDpr);
 
     if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
       canvas.width = displayWidth;
@@ -133,7 +87,7 @@ export default function ScrollSequence({
     }
 
     ctx.save();
-    ctx.scale(dpr, dpr);
+    ctx.scale(effectiveDpr, effectiveDpr);
 
     // Compute cover scaling
     const imgWidth = img.naturalWidth;
@@ -162,6 +116,85 @@ export default function ScrollSequence({
 
     lastDrawnIndexRef.current = frameIndex;
   }, []);
+
+  // Priority-aware preload: load first frame, last frame, then every 12th (keyframes),
+  // then fill in the rest. Decode each frame before marking it ready.
+  useEffect(() => {
+    let isMounted = true;
+    const images: HTMLImageElement[] = [];
+    imagesRef.current = images;
+
+    let loaded = 0;
+
+    const handleSingleLoad = (img: HTMLImageElement, index: number) => {
+      if (!isMounted) return;
+      images[index] = img;
+      loaded += 1;
+      setLoadedCount(loaded);
+
+      // Once the first frame is ready, render it immediately
+      if (index === 0 && canvasRef.current) {
+        drawFrame(0);
+      }
+
+      if (loaded === frameCount) {
+        setIsReady(true);
+      }
+    };
+
+    const loadFrame = (i: number) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = getFrameUrl(basePath, prefix, i, pad, format);
+
+      img.onload = () => {
+        if ('decode' in img && typeof img.decode === 'function') {
+          img.decode()
+            .then(() => handleSingleLoad(img, i))
+            .catch(() => handleSingleLoad(img, i));
+        } else {
+          handleSingleLoad(img, i);
+        }
+      };
+
+      img.onerror = () => {
+        if (i === 0) setLoadError(true);
+        handleSingleLoad(img, i);
+      };
+    };
+
+    // Phase 1: First frame (critical for first paint)
+    loadFrame(0);
+
+    // Phase 2: Keyframes at every ~12th frame + last frame (gives smooth scrubbing feel)
+    const keyframeInterval = 12;
+    const keyframes: number[] = [];
+    for (let i = keyframeInterval; i < frameCount - 1; i += keyframeInterval) {
+      keyframes.push(i);
+    }
+    if (frameCount > 1) keyframes.push(frameCount - 1);
+
+    // Use requestIdleCallback or setTimeout to avoid blocking main thread
+    const schedule = typeof requestIdleCallback !== 'undefined' ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 1);
+
+    schedule(() => {
+      if (!isMounted) return;
+      for (const k of keyframes) loadFrame(k);
+
+      // Phase 3: Fill remaining frames after keyframes
+      schedule(() => {
+        if (!isMounted) return;
+        for (let i = 1; i < frameCount; i++) {
+          if (images[i]) continue; // already loaded (keyframe)
+          loadFrame(i);
+        }
+      });
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [frameCount, basePath, prefix, pad, format, drawFrame]);
 
   // Window resize handler
   useEffect(() => {

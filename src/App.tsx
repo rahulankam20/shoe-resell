@@ -16,6 +16,10 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const AccountPage = lazy(() => import('./pages/AccountPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const OrderConfirmationPage = lazy(() => import('./pages/OrderConfirmationPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
+const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'));
+const RefundPolicyPage = lazy(() => import('./pages/RefundPolicyPage'));
+const ShippingPolicyPage = lazy(() => import('./pages/ShippingPolicyPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 export default function App() {
@@ -70,6 +74,10 @@ export default function App() {
                     </AdminRoute>
                   }
                 />
+                <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
+                <Route path="terms-of-service" element={<TermsOfServicePage />} />
+                <Route path="refund-policy" element={<RefundPolicyPage />} />
+                <Route path="shipping-policy" element={<ShippingPolicyPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Routes>
