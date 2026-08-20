@@ -4,7 +4,7 @@ import db from './_lib/db.js';
 import { cashfreeConfig, verifyWebhookSignature, parseWebhookPayload } from './_lib/cashfree.js';
 import { recordWebhookEvent, processPaymentEvent, processRefundEvent } from './_lib/settlement.js';
 
-export const config = { api: { bodyParser: false } };
+
 
 export default async function handler(req, res) {
   applySecurityHeaders(req, res, 'POST, OPTIONS');
