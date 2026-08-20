@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { applySecurityHeaders } from './_lib/http.js';
 import { requireAdmin } from './_lib/auth.js';
 import db from './_lib/db.js';
-import { reconcileOrder } from './payments.js';
+import { reconcileOrder } from './_lib/settlement.js';
 import { PaymentState } from './_lib/state.js';
 
 function timingSafeEqualString(left, right) {
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     const results = [];
     for (const order of pending) {
       try {
-        const result = await reconcileOrder(order, 'batch_reconcile');
+        const result = await reconcileOrder(db, order, 'batch_reconcile');
         results.push({ order_id: order.id, order_number: order.order_number, result: result.status });
       } catch (error) {
         results.push({ order_id: order.id, order_number: order.order_number, result: 'error', error: error.message });

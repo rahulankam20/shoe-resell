@@ -279,4 +279,41 @@ export async function processRefundEvent(db, { parsed, source }) {
   return { status: next.toLowerCase(), refund: updated };
 }
 
+export function pickOfficialPayment(payments) {
+  if (!Array.isArray(payments) || !payments.length) return null;
+  return payments.find((row) => String(row.payment_status).toUpperCase() === 'SUCCESS') || payments[0];
+}
+
+export async function reconcileOrder(db, order, source = 'reconcile') {
+  if (!order) return { status: 'order_not_found' };
+  if ([PaymentState.PAID, PaymentState.REFUNDED, PaymentState.PARTIALLY_REFUNDED].includes(order.payment_status)) {
+    return { status: 'already_terminal', order };
+  }
+
+  const cfg = cashfreeConfig();
+  if (!cfg.configured) {
+    return { status: 'provider_unconfigured', order };
+  }
+
+  const cfOrder = await getCashfreeOrder(order.order_number);
+  const payments = await getCashfreePayments(order.order_number);
+  const official = pickOfficialPayment(payments);
+  const parsed = {
+    type: 'RECONCILE',
+    orderId: order.order_number,
+    cfOrderId: String(cfOrder.cf_order_id || order.cf_order_id || ''),
+    cfPaymentId: official ? String(official.cf_payment_id) : '',
+    orderAmount: Number(cfOrder.order_amount || order.total),
+    paymentAmount: Number(official?.payment_amount || cfOrder.order_amount || order.total),
+    currency: official?.payment_currency || cfOrder.order_currency || 'INR',
+    paymentStatus: String(official?.payment_status || (cfOrder.order_status === 'PAID' ? 'SUCCESS' : '')).toUpperCase(),
+    orderStatus: String(cfOrder.order_status || '').toUpperCase(),
+    paymentMessage: official?.payment_message || '',
+    bankReference: official?.bank_reference || '',
+    payload: { order: cfOrder, payment: official, payments },
+  };
+
+  return processPaymentEvent(db, { parsed, source });
+}
+
 export { webhookDedupKey, paymentMapKey };
