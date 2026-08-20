@@ -8,10 +8,7 @@ import { writeAudit } from './_lib/audit.js';
 import { PaymentState, FulfillmentState, assertFulfillmentTransition } from './_lib/state.js';
 import { sanitizeCustomer, validateCustomer, normalizeCartItems, itemHash, makeOrderNumber } from './_lib/validation.js';
 
-// Vercel: maxDuration controls the wall-clock limit granted by the platform.
-// Hobby plan caps this at 10 s regardless of what is declared here.
-// If you are on Pro/Enterprise you can raise it; update CASHFREE_TIMEOUT_MS too.
-export const maxDuration = 15;
+
 
 // Hard deadline (ms) the checkout() call must complete within.
 // Set FUNCTION_DEADLINE_MS in env to match your actual platform cap minus ~2 s

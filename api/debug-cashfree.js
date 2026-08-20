@@ -7,7 +7,7 @@
 import { cashfreeConfig, cfFetch } from './_lib/cashfree.js';
 import { applySecurityHeaders } from './_lib/http.js';
 
-export const maxDuration = 15;
+
 
 const PROBE_TIMEOUT_MS = 5000;
 
