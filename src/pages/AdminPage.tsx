@@ -32,10 +32,10 @@ export default function AdminPage() {
       const [p, o, b, c, u, pay] = await Promise.all([
         fetch('/api/products'),
         fetch('/api/orders?admin=true', { headers }),
-        fetch('/api/brands'),
-        fetch('/api/categories'),
+        fetch('/api/products?type=brands'),
+        fetch('/api/products?type=categories'),
         fetch('/api/users', { headers }),
-        fetch('/api/admin-payments', { headers }),
+        fetch('/api/payments?admin=true', { headers }),
       ]);
       if (!p.ok || !o.ok || !b.ok || !c.ok || !u.ok) throw new Error('Could not load admin data');
       setProducts(await p.json());
@@ -78,8 +78,8 @@ export default function AdminPage() {
     }
     load();
   };
-  const addTaxonomy = async (event: React.FormEvent) => { event.preventDefault(); if (!taxonomyName.trim()) return; await api(`/api/${taxonomyType}`, 'POST', { name: taxonomyName }); setTaxonomyName(''); load(); };
-  const deleteTaxonomy = async (type: 'brands' | 'categories', id: number) => { await api(`/api/${type}`, 'DELETE', { id }); load(); };
+  const addTaxonomy = async (event: React.FormEvent) => { event.preventDefault(); if (!taxonomyName.trim()) return; await api(`/api/products?type=${taxonomyType}`, 'POST', { name: taxonomyName, taxonomy: taxonomyType === 'brands' ? 'brand' : 'category' }); setTaxonomyName(''); load(); };
+  const deleteTaxonomy = async (type: 'brands' | 'categories', id: number) => { await api(`/api/products?type=${type}`, 'DELETE', { id }); load(); };
   const updateRole = async (id: string, role: string) => { await api('/api/users', 'PUT', { id, role }); load(); };
   const refundOrder = async (order: Order) => {
     if (!confirm(`Refund ${money(order.total)} for ${order.order_number}?`)) return;

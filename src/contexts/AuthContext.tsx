@@ -13,7 +13,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = async (activeSession = session) => {
     if (!activeSession) { setProfile(null); return; }
-    const response = await fetch('/api/profile', { headers: { Authorization: `Bearer ${activeSession.access_token}` } });
+    const response = await fetch('/api/users?profile=true', { headers: { Authorization: `Bearer ${activeSession.access_token}` } });
     if (response.ok) setProfile(await response.json());
   };
 
