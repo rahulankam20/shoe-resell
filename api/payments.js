@@ -107,6 +107,41 @@ export default async function handler(req, res) {
     if (!user) return;
 
     if (req.method === 'GET') {
+      const isAdminQuery = req.query?.admin === 'true' || req.query?.scope === 'admin';
+      if (isAdminQuery) {
+        if (!await isAdmin(user)) return res.status(403).json({ error: 'Administrator access required' });
+        const [orders, payments, refunds, webhooks] = await Promise.all([
+          db.listOrders({ admin: true }),
+          db.listAllPayments(),
+          db.listAllRefunds(),
+          db.listWebhookEvents(),
+        ]);
+        const itemsByOrder = {};
+        for (const order of orders.slice(0, 80)) {
+          itemsByOrder[order.id] = await db.getOrderItems(order.id);
+        }
+        return res.status(200).json({
+          orders: orders.map((order) => ({
+            ...order,
+            items: itemsByOrder[order.id] || [],
+            payment_session_id: undefined,
+          })),
+          payments,
+          refunds,
+          webhooks: webhooks.map((event) => ({
+            id: event.id,
+            dedup_key: event.dedup_key,
+            event_type: event.event_type,
+            order_id: event.order_id,
+            cf_payment_id: event.cf_payment_id,
+            cf_refund_id: event.cf_refund_id,
+            signature_valid: event.signature_valid,
+            source: event.source,
+            created_at: event.created_at,
+          })),
+        });
+      }
+
       const orderId = req.query?.order_id || req.query?.id;
       if (!orderId) return res.status(400).json({ error: 'order_id is required' });
       const order = await db.getOrder(orderId);

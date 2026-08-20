@@ -23,7 +23,7 @@ export default function AccountPage() {
   const load = useCallback(async () => { setLoading(true); const headers = await authHeaders(); const [orderRes, addressRes] = await Promise.all([fetch('/api/orders', { headers }), fetch('/api/addresses', { headers })]); if (orderRes.ok) setOrders(await orderRes.json()); if (addressRes.ok) setAddresses(await addressRes.json()); setLoading(false); }, []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (profile) setForm(profile); }, [profile]);
-  const saveProfile = async (event: React.FormEvent) => { event.preventDefault(); const response = await fetch('/api/profile', { method: 'PUT', headers: await authHeaders(), body: JSON.stringify({ full_name: form.full_name, phone: form.phone }) }); setMessage(response.ok ? 'Profile updated' : 'Could not update profile'); if (response.ok) refreshProfile(); };
+  const saveProfile = async (event: React.FormEvent) => { event.preventDefault(); const response = await fetch('/api/users?profile=true', { method: 'PUT', headers: await authHeaders(), body: JSON.stringify({ full_name: form.full_name, phone: form.phone }) }); setMessage(response.ok ? 'Profile updated' : 'Could not update profile'); if (response.ok) refreshProfile(); };
   const saveAddress = async (event: React.FormEvent) => { event.preventDefault(); const response = await fetch('/api/addresses', { method: 'POST', headers: await authHeaders(), body: JSON.stringify(addressForm) }); if (response.ok) { setShowAddress(false); setAddressForm(blank); load(); } else setMessage((await response.json()).error); };
   const deleteAddress = async (id?: number) => { await fetch('/api/addresses', { method: 'DELETE', headers: await authHeaders(), body: JSON.stringify({ id }) }); load(); };
 

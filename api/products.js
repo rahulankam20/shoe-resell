@@ -31,8 +31,21 @@ export default async function handler(req, res) {
   applySecurityHeaders(req, res);
   if (req.method === 'OPTIONS') return res.status(204).end();
 
+  const type = String(req.query?.type || '').toLowerCase();
+
   try {
     if (req.method === 'GET') {
+      if (type === 'brands') {
+        const { data, error } = await supabase.from('brands').select('*').order('name');
+        if (error) throw error;
+        return res.status(200).json(data ?? []);
+      }
+      if (type === 'categories') {
+        const { data, error } = await supabase.from('categories').select('*').order('name');
+        if (error) throw error;
+        return res.status(200).json(data ?? []);
+      }
+
       const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false }).limit(250);
       if (error) throw error;
       const all = (data ?? []).map(withDiscount);
@@ -78,6 +91,23 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const body = req.body ?? {};
+
+      if (type === 'brands' || body.taxonomy === 'brand') {
+        const name = String(body.name || '').trim();
+        if (!name) return res.status(400).json({ error: 'Brand name required' });
+        const { data, error } = await supabase.from('brands').insert({ name, slug: slugify(name) }).select().single();
+        if (error) throw error;
+        return res.status(201).json(data);
+      }
+
+      if (type === 'categories' || body.taxonomy === 'category') {
+        const name = String(body.name || '').trim();
+        if (!name) return res.status(400).json({ error: 'Category name required' });
+        const { data, error } = await supabase.from('categories').insert({ name, slug: slugify(name) }).select().single();
+        if (error) throw error;
+        return res.status(201).json(data);
+      }
+
       if (!body.brand || !body.name || !body.category || !body.mrp || !body.sale_price) {
         return res.status(400).json({ error: 'Brand, name, category, MRP and sale price are required' });
       }
@@ -123,8 +153,21 @@ export default async function handler(req, res) {
 
     if (req.method === 'DELETE') {
       const { id } = req.body ?? {};
-      if (!id) return res.status(400).json({ error: 'Product id is required' });
-      const { error } = await supabase.from('products').delete().eq('id', Number(id));
+      const targetId = Number(id || req.query?.id);
+      if (!targetId) return res.status(400).json({ error: 'id is required' });
+
+      if (type === 'brands') {
+        const { error } = await supabase.from('brands').delete().eq('id', targetId);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
+      if (type === 'categories') {
+        const { error } = await supabase.from('categories').delete().eq('id', targetId);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
+
+      const { error } = await supabase.from('products').delete().eq('id', targetId);
       if (error) throw error;
       return res.status(200).json({ ok: true });
     }
