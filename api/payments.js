@@ -3,47 +3,10 @@ import { requireUser, isAdmin } from './_lib/auth.js';
 import { enforceRateLimit } from './_lib/rateLimit.js';
 import db from './_lib/db.js';
 import { cashfreeConfig, getCashfreeOrder, getCashfreePayments, createCashfreeRefund } from './_lib/cashfree.js';
-import { processPaymentEvent, processRefundEvent } from './_lib/settlement.js';
+import { processPaymentEvent, processRefundEvent, reconcileOrder } from './_lib/settlement.js';
 import { PaymentState, RefundState } from './_lib/state.js';
 import { makeRefundId } from './_lib/validation.js';
 import { writeAudit } from './_lib/audit.js';
-
-function pickOfficialPayment(payments) {
-  if (!Array.isArray(payments) || !payments.length) return null;
-  return payments.find((row) => String(row.payment_status).toUpperCase() === 'SUCCESS') || payments[0];
-}
-
-export async function reconcileOrder(order, source = 'reconcile') {
-  if (!order) return { status: 'order_not_found' };
-  if ([PaymentState.PAID, PaymentState.REFUNDED, PaymentState.PARTIALLY_REFUNDED].includes(order.payment_status)) {
-    return { status: 'already_terminal', order };
-  }
-
-  const cfg = cashfreeConfig();
-  if (!cfg.configured) {
-    return { status: 'provider_unconfigured', order };
-  }
-
-  const cfOrder = await getCashfreeOrder(order.order_number);
-  const payments = await getCashfreePayments(order.order_number);
-  const official = pickOfficialPayment(payments);
-  const parsed = {
-    type: 'RECONCILE',
-    orderId: order.order_number,
-    cfOrderId: String(cfOrder.cf_order_id || order.cf_order_id || ''),
-    cfPaymentId: official ? String(official.cf_payment_id) : '',
-    orderAmount: Number(cfOrder.order_amount || order.total),
-    paymentAmount: Number(official?.payment_amount || cfOrder.order_amount || order.total),
-    currency: official?.payment_currency || cfOrder.order_currency || 'INR',
-    paymentStatus: String(official?.payment_status || (cfOrder.order_status === 'PAID' ? 'SUCCESS' : '')).toUpperCase(),
-    orderStatus: String(cfOrder.order_status || '').toUpperCase(),
-    paymentMessage: official?.payment_message || '',
-    bankReference: official?.bank_reference || '',
-    payload: { order: cfOrder, payment: official, payments },
-  };
-
-  return processPaymentEvent(db, { parsed, source });
-}
 
 async function handleRefund(req, res, user) {
   if (!await isAdmin(user)) return res.status(403).json({ error: 'Administrator access required' });
@@ -180,7 +143,7 @@ export default async function handler(req, res) {
         const order = await db.getOrder(orderId);
         if (!order) return res.status(404).json({ error: 'Order not found' });
         if (order.user_id !== user.id && !await isAdmin(user)) return res.status(404).json({ error: 'Order not found' });
-        const result = await reconcileOrder(order, 'user_reconcile');
+        const result = await reconcileOrder(db, order, 'user_reconcile');
         const latest = await db.getOrder(order.id);
         return res.status(200).json({
           result: result.status,
