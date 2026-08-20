@@ -1,4 +1,4 @@
-import { applySecurityHeaders, clientIp } from './_lib/http.js';
+import { applySecurityHeaders, clientIp, parseJsonBody } from './_lib/http.js';
 import { requireUser, isAdmin } from './_lib/auth.js';
 import { enforceRateLimit } from './_lib/rateLimit.js';
 import db from './_lib/db.js';
@@ -10,7 +10,8 @@ import { writeAudit } from './_lib/audit.js';
 
 async function handleRefund(req, res, user) {
   if (!await isAdmin(user)) return res.status(403).json({ error: 'Administrator access required' });
-  const { order_id, amount, note, refund_id } = req.body || {};
+  const body = parseJsonBody(req);
+  const { order_id, amount, note, refund_id } = body || {};
   if (!order_id) return res.status(400).json({ error: 'order_id is required' });
   const order = await db.getOrder(order_id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
@@ -170,16 +171,17 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const action = req.query?.action || req.body?.action || 'status';
+      const body = parseJsonBody(req);
+      const action = req.query?.action || body?.action || 'status';
       if (action === 'refund') return handleRefund(req, res, user);
       if (action === 'reconcile') {
-        if (!await enforceRateLimit(res, `reconcile:${user.id}:${clientIp(req)}`, 12, 60_000)) return;
-        const orderId = req.body?.order_id || req.query?.order_id;
+        if (!await enforceRateLimit(res, `reconcile:${user.id}:${clientIp(req)}`, 20, 60_000)) return;
+        const orderId = body?.order_id || req.query?.order_id || body?.orderNumber || req.query?.id;
         const order = await db.getOrder(orderId);
         if (!order) return res.status(404).json({ error: 'Order not found' });
         if (order.user_id !== user.id && !await isAdmin(user)) return res.status(404).json({ error: 'Order not found' });
         const result = await reconcileOrder(db, order, 'user_reconcile');
-        const latest = await db.getOrder(order.id);
+        const latest = (await db.getOrder(order.id)) || order;
         return res.status(200).json({
           result: result.status,
           payment_status: latest.payment_status,

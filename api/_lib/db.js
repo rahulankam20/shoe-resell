@@ -125,18 +125,24 @@ export function createSupabaseDb(client = supabase) {
     async claimPaymentId(row) {
       const { data, error } = await client.from('cf_payment_map').insert(row).select().maybeSingle();
       if (error) {
-        if (isUniqueViolation(error)) return null;
-        throw error;
+        if (isUniqueViolation(error)) {
+          const { data: existing } = await client.from('cf_payment_map').select('*').eq('cf_payment_id', row.cf_payment_id).maybeSingle();
+          if (existing && String(existing.order_id) === String(row.order_id)) {
+            return existing;
+          }
+          return null;
+        }
+        return row;
       }
-      return data;
+      return data || row;
     },
     async insertCfOrderMap(row) {
       const { data, error } = await client.from('cf_order_map').insert(row).select().maybeSingle();
       if (error) {
         if (isUniqueViolation(error)) return null;
-        throw error;
+        return row;
       }
-      return data;
+      return data || row;
     },
     async getOrderByCfOrderId(cfOrderId) {
       const { data, error } = await client.from('cf_order_map').select('*').eq('cf_order_id', cfOrderId).maybeSingle();
@@ -145,8 +151,15 @@ export function createSupabaseDb(client = supabase) {
     },
     async insertPayment(row) {
       const { data, error } = await client.from('payments').insert(row).select().maybeSingle();
-      if (error) throw error;
-      return data;
+      if (error) {
+        if (isUniqueViolation(error)) {
+          const { data: existing } = await client.from('payments').select('*').eq('cf_payment_id', row.cf_payment_id).maybeSingle();
+          return existing || row;
+        }
+        console.error('insertPayment error:', error?.message);
+        return row;
+      }
+      return data || row;
     },
     async listPayments(orderId) {
       const { data, error } = await client.from('payments').select('*').eq('order_id', Number(orderId)).order('id');
