@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import ScrollSequence from '../components/ScrollSequence';
 import ProductCard from '../components/ProductCard';
 import { ErrorState, LoadingState } from '../components/StatePanel';
+import { getProductImage, handleImageError, BRAND_FALLBACKS } from '../lib/images';
 import type { Brand, Category, Product } from '../types';
 
 interface Storefront {
@@ -46,31 +47,31 @@ export default function HomePage() {
         alt="Premium sneaker 360 interactive rotation"
         onProgress={setProgress}
       >
-        {/* Story Overlay Layer — Apple-style floating cards leaving the shoe completely unobstructed */}
+        {/* Story Overlay Layer — Positioned below sticky header with generous padding */}
         <div
           style={{
             position: 'absolute',
             inset: 0,
             pointerEvents: 'none',
             zIndex: 10,
-            padding: 'clamp(1.5rem, 4vw, 4rem)',
+            padding: 'clamp(6.5rem, 11vh, 8.5rem) clamp(1.5rem, 4vw, 4rem) clamp(2rem, 5vh, 4rem)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
           }}
         >
           {/* Top Bar: Telemetry & Interactive Chapter Stepper */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', gap: '1rem' }}>
             {/* Top Left: Active Chapter Brand Badge */}
             <div
               style={{
-                background: 'rgba(15, 15, 15, 0.75)',
+                background: 'rgba(15, 15, 15, 0.85)',
                 backdropFilter: 'blur(16px)',
                 border: '1px solid rgba(255, 255, 255, 0.12)',
                 borderRadius: '8px',
-                padding: '0.75rem 1.25rem',
+                padding: '0.85rem 1.25rem',
                 color: '#fff',
-                maxWidth: '380px',
+                maxWidth: '420px',
                 boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
                 pointerEvents: 'auto',
                 transition: 'all 0.4s ease',
@@ -109,7 +110,7 @@ export default function HomePage() {
             {/* Top Right: 360° Rotation Telemetry Gauge */}
             <div
               style={{
-                background: 'rgba(15, 15, 15, 0.75)',
+                background: 'rgba(15, 15, 15, 0.85)',
                 backdropFilter: 'blur(16px)',
                 border: '1px solid rgba(255, 255, 255, 0.12)',
                 borderRadius: '8px',
@@ -121,6 +122,7 @@ export default function HomePage() {
                 fontSize: '11px',
                 fontWeight: 800,
                 letterSpacing: '0.08em',
+                pointerEvents: 'auto',
               }}
             >
               <Compass size={15} style={{ color: '#ff4d23', transform: `rotate(${rotationDeg}deg)`, transition: 'transform 0.1s linear' }} />
@@ -142,7 +144,7 @@ export default function HomePage() {
             {/* Action Bar */}
             <div
               style={{
-                background: 'rgba(12, 12, 12, 0.82)',
+                background: 'rgba(12, 12, 12, 0.85)',
                 backdropFilter: 'blur(20px)',
                 border: '1px solid rgba(255, 255, 255, 0.15)',
                 borderRadius: '10px',
@@ -229,22 +231,30 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="brand-grid">
-              {data.brands.map((brand, index) => (
-                <Link className="brand-card" key={brand.id} to={`/shop?brand=${brand.slug}`}>
-                  <img src={brand.hero_image || '/images/solevault-hero.webp'} alt="" loading="lazy" />
-                  <div className="brand-overlay">
-                    <span>0{index + 1}</span>
-                    <h3>{brand.name}</h3>
-                    <p>{brand.product_count} pairs in the vault</p>
-                    <ArrowRight />
-                  </div>
-                </Link>
-              ))}
+              {data.brands.map((brand, index) => {
+                const bHero = brand.hero_image || BRAND_FALLBACKS[brand.slug] || '/images/solevault-hero.webp';
+                return (
+                  <Link className="brand-card" key={brand.id || brand.slug} to={`/shop?brand=${brand.slug}`}>
+                    <img
+                      src={bHero}
+                      alt={brand.name}
+                      loading="lazy"
+                      onError={(e) => handleImageError(e, '/images/solevault-hero.webp')}
+                    />
+                    <div className="brand-overlay">
+                      <span>0{index + 1}</span>
+                      <h3>{brand.name}</h3>
+                      <p>{brand.product_count} pairs in the vault</p>
+                      <ArrowRight />
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </section>
 
           {/* Categories Strip */}
-          <section className="category-section section-pad">
+          <section className="category-section section-pad" id="categories">
             <div className="section-head">
               <div>
                 <p className="eyebrow">SHOP BY MOVEMENT</p>
@@ -256,23 +266,36 @@ export default function HomePage() {
               </div>
             </div>
             <div className="category-strip">
-              {data.categories.map((category) => (
-                <Link key={category.id} className="category-card" to={`/shop?category=${category.slug}`}>
-                  <img src={category.image} alt={`${category.name} footwear`} loading="lazy" />
-                  <div>
-                    <p>{category.description}</p>
-                    <h3>{category.name}</h3>
-                    <ArrowRight />
-                  </div>
-                </Link>
-              ))}
+              {data.categories.map((category) => {
+                const catImg = category.image || `/images/category-${category.slug}.jpg`;
+                return (
+                  <Link key={category.id || category.slug} className="category-card" to={`/shop?category=${category.slug}`}>
+                    <img
+                      src={catImg}
+                      alt={`${category.name} footwear`}
+                      loading="lazy"
+                      onError={(e) => handleImageError(e, '/images/category-sneakers.jpg')}
+                    />
+                    <div>
+                      <p>{category.description || 'Verified Footwear'}</p>
+                      <h3>{category.name}</h3>
+                      <ArrowRight />
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </section>
 
           {/* Deal Banner */}
           <section className="deal-banner">
             <div className="deal-image">
-              <img src={data.deals[0]?.images[0]} alt="Featured footwear deal" loading="lazy" />
+              <img
+                src={data.deals[0] ? getProductImage(data.deals[0]) : '/images/products/adidas-ultraboost.jpg'}
+                alt="Featured footwear deal"
+                loading="lazy"
+                onError={(e) => handleImageError(e, '/images/products/adidas-ultraboost.jpg')}
+              />
             </div>
             <div className="deal-copy">
               <p className="eyebrow accent">THE PRICE DROP</p>
