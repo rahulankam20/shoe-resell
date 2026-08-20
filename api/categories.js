@@ -1,4 +1,4 @@
-import supabase from './db-client.js';
+import supabase from './_lib/db-client.js';
 import { applySecurityHeaders } from './_lib/http.js';
 
 export default async function handler(req, res) {

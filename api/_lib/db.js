@@ -1,4 +1,4 @@
-import supabase from '../db-client.js';
+import supabase from './db-client.js';
 import { skuKey } from './inventory.js';
 
 function isUniqueViolation(error) {

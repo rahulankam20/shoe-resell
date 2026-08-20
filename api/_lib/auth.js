@@ -1,4 +1,4 @@
-import supabase from '../db-client.js';
+import supabase from './db-client.js';
 
 export async function getUser(req) {
   const header = req.headers?.authorization || req.headers?.Authorization || '';
