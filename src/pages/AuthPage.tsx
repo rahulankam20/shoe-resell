@@ -92,6 +92,19 @@ export default function AuthPage() {
     }
   };
 
+  const handleGoogle = async () => {
+    if (busy) return;
+    setError('');
+    setMessage('');
+    setBusy(true);
+    try {
+      await signInWithGoogle('SOLEVAULT');
+    } catch (err: any) {
+      setError(err?.message || 'Unable to connect to Google. Please try again.');
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-visual">
@@ -177,8 +190,8 @@ export default function AuthPage() {
           <div className="or">
             <span>or</span>
           </div>
-          <button className="google-button" onClick={() => signInWithGoogle('SOLEVAULT')} disabled={busy}>
-            G <span>Continue with Google</span>
+          <button type="button" className="google-button" onClick={handleGoogle} disabled={busy}>
+            G <span>{busy ? 'Connecting to Google…' : 'Continue with Google'}</span>
           </button>
           <p className="auth-switch">
             {signUp ? 'Already a member?' : 'New to SOLEVAULT?'}{' '}
