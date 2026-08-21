@@ -134,13 +134,45 @@ img { max-width: 100%; }
 .drawer-promo { font-size: 2.5rem; font-weight: 900; line-height: .9; margin: 4rem 0 3rem; }
 .mobile-drawer nav { display: flex; flex-direction: column; }
 .mobile-drawer nav a { display: flex; justify-content: space-between; padding: 1rem 0; border-bottom: 1px solid #333; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; }
-.search-overlay { position: fixed; inset: 0; z-index: 110; background: rgba(10,10,10,.97); color: white; display: grid; place-items: center; padding: 2rem; }
-.search-overlay form { width: min(900px, 90vw); }
-.search-overlay label { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #888; margin-bottom: 1.25rem; }
-.search-overlay form > div { display: flex; border-bottom: 2px solid white; }
-.search-overlay input { width: 100%; background: transparent; border: 0; color: white; font-size: clamp(1.7rem, 4vw, 4rem); font-weight: 700; padding: .5rem 0; outline: none; }
-.search-overlay form button, .search-close { border: 0; background: transparent; color: white; }
-.search-close { position: absolute; top: 2rem; right: 2rem; }
+/* Anchored Header Search Dropdown */
+.search-trigger-btn { border: 0; background: transparent; color: inherit; cursor: pointer; display: grid; place-items: center; padding: 6px; border-radius: 50%; transition: background-color 0.2s, color 0.2s; }
+.search-trigger-btn:hover, .search-trigger-btn.active { color: var(--accent); background: rgba(255, 77, 35, 0.1); }
+.search-dropdown-panel { position: absolute; top: 100%; left: 0; right: 0; background: rgba(14, 14, 14, 0.98); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); padding: 1.25rem 5vw 1.5rem; z-index: 95; animation: searchSlideDown 0.2s ease-out; }
+@keyframes searchSlideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.search-form-row { max-width: 900px; margin: 0 auto; display: flex; align-items: center; gap: 0.75rem; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 8px; padding: 0.5rem 1rem; }
+.search-form-row:focus-within { border-color: var(--accent); background: rgba(255, 255, 255, 0.09); }
+.search-input-icon { color: #888; flex-shrink: 0; }
+.search-dropdown-input { flex: 1; background: transparent; border: 0; color: #fff; font-size: 1rem; outline: none; font-weight: 500; }
+.search-dropdown-input::placeholder { color: #777; }
+.search-spinner { color: var(--accent); animation: spin 1s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+.search-clear-btn { border: 0; background: transparent; color: #888; cursor: pointer; padding: 4px; display: grid; place-items: center; border-radius: 4px; }
+.search-clear-btn:hover { color: #fff; }
+.search-submit-btn { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 0.5rem 1.1rem; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; transition: opacity 0.2s; }
+.search-submit-btn:hover { opacity: 0.9; }
+
+.search-results-box { max-width: 900px; margin: 1rem auto 0; }
+.search-section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #777; margin: 0 0 0.5rem; font-weight: 700; }
+.search-results-list { display: flex; flex-direction: column; gap: 0.35rem; }
+.search-result-item { display: flex; align-items: center; gap: 1rem; padding: 0.6rem 0.85rem; border-radius: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid transparent; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.search-result-item:hover, .search-result-item:focus { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.12); }
+.search-result-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; background: #222; flex-shrink: 0; }
+.search-result-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.search-result-brand { font-size: 10px; color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+.search-result-name { font-size: 13px; font-weight: 600; color: #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-result-price-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 2px; }
+.search-result-price { font-size: 12px; color: #fff; }
+.search-result-mrp { font-size: 11px; color: #777; text-decoration: line-through; }
+.search-result-discount { font-size: 9px; color: var(--accent); font-weight: 800; letter-spacing: 0.05em; }
+.search-result-arrow { color: #666; margin-left: auto; flex-shrink: 0; transition: transform 0.15s, color 0.15s; }
+.search-result-item:hover .search-result-arrow { color: #fff; transform: translateX(3px); }
+.search-view-all-btn { margin-top: 0.5rem; background: transparent; border: 0; color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0; text-transform: uppercase; letter-spacing: 0.05em; }
+.search-view-all-btn:hover { text-decoration: underline; }
+.search-empty-state { padding: 1.25rem 0.5rem; text-align: center; color: #999; font-size: 13px; }
+.search-suggestions { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+.search-suggestions span { font-size: 11px; color: #666; }
+.search-suggestions button { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; color: #ddd; padding: 0.25rem 0.75rem; font-size: 11px; cursor: pointer; transition: background 0.15s; }
+.search-suggestions button:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
 .page-shell { max-width: 1600px; margin: auto; padding: clamp(2.5rem, 5vw, 6rem) clamp(1rem, 4vw, 4rem); min-height: 65vh; }
 .shop-hero { padding: clamp(2rem, 5vw, 5rem) 0; border-bottom: 1px solid var(--line); }
 .shop-hero h1 { font-size: clamp(4rem, 9vw, 9rem); }

@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { clientIp } from '../../api/_lib/http.js';
+import { clientIp, applySecurityHeaders } from '../../api/_lib/http.js';
 import { recordWebhookEvent } from '../../api/_lib/settlement.js';
+import { createMemoryDb } from './memoryDb.js';
 
 test('clientIp prioritizes platform-set headers over spoofable x-forwarded-for', () => {
   // Test 1: x-real-ip takes precedence over client x-forwarded-for
@@ -108,4 +109,76 @@ test('address PIN code validation enforces 6 digits Indian postal format', () =>
   assert.ok(!pinRegex.test('56000A')); // letters
   assert.ok(!pinRegex.test(' 560001 ')); // whitespace
   assert.ok(!pinRegex.test(''));
+});
+
+test('inventory lookup finds legacy underscore format and self-heals to canonical colon format', async () => {
+  const db = createMemoryDb({
+    inventory: [
+      { sku_key: '10_9', product_id: 10, size: '9', quantity: 5, reserved: 0, version: 1 },
+    ],
+  });
+
+  // Querying canonical format finds the legacy row and heals it
+  const row = await db.getInventory('10:9');
+  assert.ok(row, 'Row should be found');
+  assert.equal(row.sku_key, '10:9', 'SKU key should be self-healed to canonical format');
+  assert.equal(row.quantity, 5);
+  assert.equal(row.version, 2);
+
+  // Subsequent query with canonical format finds the now-canonical row directly
+  const canonicalRow = await db.getInventory('10:9');
+  assert.equal(canonicalRow.sku_key, '10:9');
+  assert.equal(canonicalRow.version, 2);
+});
+
+test('concurrent inventory update and healing under version lock works safely', async () => {
+  const db = createMemoryDb({
+    inventory: [
+      { sku_key: '20_10', product_id: 20, size: '10', quantity: 3, reserved: 0, version: 1 },
+    ],
+  });
+
+  // Concurrent updates with the same initial version — only one can succeed under OCC
+  const [res1, res2] = await Promise.all([
+    db.updateInventory('20:10', 1, { reserved: 1, version: 2 }),
+    db.updateInventory('20:10', 1, { reserved: 2, version: 2 }),
+  ]);
+
+  const succeeded = [res1, res2].filter(Boolean);
+  assert.equal(succeeded.length, 1, 'Only one concurrent update with matching version should succeed');
+  assert.equal(succeeded[0].sku_key, '20:10', 'Should update to canonical format');
+});
+
+test('applySecurityHeaders omits Access-Control-Allow-Origin for disallowed origins and sets HSTS/CSP', () => {
+  function createMockRes() {
+    const headers = {};
+    return {
+      setHeader: (k, v) => { headers[k.toLowerCase()] = v; },
+      getHeader: (k) => headers[k.toLowerCase()],
+      headers,
+    };
+  }
+
+  // Case 1: Disallowed Origin -> NO ACAO header set
+  const res1 = createMockRes();
+  applySecurityHeaders({ headers: { origin: 'https://evil-attacker.com' } }, res1);
+  assert.equal(res1.getHeader('Access-Control-Allow-Origin'), undefined, 'Disallowed origin must get no ACAO header');
+
+  // Case 2: Allowed Origin -> Echo origin + Vary: Origin
+  const res2 = createMockRes();
+  applySecurityHeaders({ headers: { origin: 'https://solevault-app.vercel.app' } }, res2);
+  assert.equal(res2.getHeader('Access-Control-Allow-Origin'), 'https://solevault-app.vercel.app');
+  assert.equal(res2.getHeader('Vary'), 'Origin');
+
+  // Case 3: HTTPS Request -> Strict-Transport-Security header present
+  const res3 = createMockRes();
+  applySecurityHeaders({ headers: { 'x-forwarded-proto': 'https' } }, res3);
+  assert.equal(res3.getHeader('Strict-Transport-Security'), 'max-age=31536000; includeSubDomains');
+  assert.equal(res3.getHeader('Content-Security-Policy'), "default-src 'none'; frame-ancestors 'none'");
+
+  // Case 4: Local non-HTTPS -> No HSTS header
+  const res4 = createMockRes();
+  applySecurityHeaders({ headers: {} }, res4);
+  assert.equal(res4.getHeader('Strict-Transport-Security'), undefined);
+  assert.equal(res4.getHeader('Content-Security-Policy'), "default-src 'none'; frame-ancestors 'none'");
 });

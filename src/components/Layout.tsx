@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Heart, Menu, Search, ShoppingBag, User, X, ArrowRight, Check } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Heart, Menu, Search, ShoppingBag, User, X, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getProductImage, handleImageError } from '../lib/images';
+import { money } from '../lib/format';
+import type { Product } from '../types';
 
 const navItems = [
   ['New Arrivals', '/shop?sort=newest'],
@@ -19,6 +21,11 @@ export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [liveResults, setLiveResults] = useState<Product[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const { count, toast, dismissToast } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -27,6 +34,8 @@ export default function Layout() {
   useEffect(() => {
     setMenuOpen(false);
     setSearchOpen(false);
+    setQuery('');
+    setLiveResults([]);
 
     if (location.hash === '#brands') {
       setTimeout(() => {
@@ -37,6 +46,65 @@ export default function Layout() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [location.pathname, location.hash]);
+
+  // Focus search input on open
+  useEffect(() => {
+    if (searchOpen) {
+      setTimeout(() => searchInputRef.current?.focus(), 50);
+    } else {
+      setQuery('');
+      setLiveResults([]);
+    }
+  }, [searchOpen]);
+
+  // Debounced live search preview
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed || !searchOpen) {
+      setLiveResults([]);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/products?search=${encodeURIComponent(trimmed)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setLiveResults(Array.isArray(data) ? data.slice(0, 5) : []);
+        }
+      } catch {
+        setLiveResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 180);
+
+    return () => clearTimeout(timer);
+  }, [query, searchOpen]);
+
+  // Dismiss on Escape key or outside click
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSearchOpen(false);
+    };
+
+    const onClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    };
+
+    if (searchOpen) {
+      window.addEventListener('keydown', onKeyDown);
+      document.addEventListener('mousedown', onClickOutside);
+    }
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('mousedown', onClickOutside);
+    };
+  }, [searchOpen]);
 
   const handleNavClick = (href: string, event: React.MouseEvent) => {
     if (href === '/#brands') {
@@ -50,8 +118,15 @@ export default function Layout() {
 
   const submitSearch = (event: React.FormEvent) => {
     event.preventDefault();
-    if (query.trim()) navigate(`/shop?search=${encodeURIComponent(query.trim())}`);
+    if (query.trim()) {
+      navigate(`/shop?search=${encodeURIComponent(query.trim())}`);
+      setSearchOpen(false);
+    }
+  };
+
+  const handleSelectProduct = (productId: number) => {
     setSearchOpen(false);
+    navigate(`/product/${productId}`);
   };
 
   return (
@@ -64,7 +139,7 @@ export default function Layout() {
         <strong>50–75% OFF MRP</strong>
         <span>BRAND NEW</span>
       </div>
-      <header className="site-header">
+      <header className="site-header" ref={searchRef}>
         <div className="nav-wrap">
           <button className="mobile-menu-button" onClick={() => setMenuOpen(true)} aria-label="Open menu">
             <Menu />
@@ -80,8 +155,12 @@ export default function Layout() {
             ))}
           </nav>
           <div className="nav-actions">
-            <button onClick={() => setSearchOpen(true)} aria-label="Search">
-              <Search />
+            <button
+              onClick={() => setSearchOpen((prev) => !prev)}
+              aria-label={searchOpen ? 'Close search' : 'Open search'}
+              className={`search-trigger-btn ${searchOpen ? 'active' : ''}`}
+            >
+              {searchOpen ? <X size={20} /> : <Search size={20} />}
             </button>
             <Link to="/wishlist" aria-label="Wishlist">
               <Heart />
@@ -95,6 +174,98 @@ export default function Layout() {
             </Link>
           </div>
         </div>
+
+        {/* Anchored Search Dropdown Panel */}
+        {searchOpen && (
+          <div className="search-dropdown-panel" role="dialog" aria-label="Quick search">
+            <form onSubmit={submitSearch} className="search-form-row">
+              <Search className="search-input-icon" size={18} />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search brands, silhouettes, styles…"
+                className="search-dropdown-input"
+                aria-label="Search shoes"
+              />
+              {searching && <Loader2 size={16} className="search-spinner" />}
+              {query && !searching && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    searchInputRef.current?.focus();
+                  }}
+                  className="search-clear-btn"
+                  aria-label="Clear search query"
+                >
+                  <X size={16} />
+                </button>
+              )}
+              <button type="submit" className="search-submit-btn" aria-label="Submit search">
+                Search
+              </button>
+            </form>
+
+            {/* Instant Live Search Previews */}
+            {query.trim().length > 0 && (
+              <div className="search-results-box">
+                {liveResults.length > 0 ? (
+                  <div className="search-results-list">
+                    <p className="search-section-label">Products</p>
+                    {liveResults.map((product) => (
+                      <div
+                        key={product.id}
+                        onClick={() => handleSelectProduct(product.id)}
+                        className="search-result-item"
+                        role="button"
+                        tabIndex={0}
+                      >
+                        <img
+                          src={getProductImage(product)}
+                          alt={product.name}
+                          className="search-result-thumb"
+                          onError={(e) => handleImageError(e, '/images/solevault-hero.webp')}
+                        />
+                        <div className="search-result-info">
+                          <span className="search-result-brand">{product.brand}</span>
+                          <span className="search-result-name">{product.name}</span>
+                          <div className="search-result-price-row">
+                            <strong className="search-result-price">{money(product.sale_price)}</strong>
+                            {Number(product.mrp) > Number(product.sale_price) && (
+                              <s className="search-result-mrp">{money(product.mrp)}</s>
+                            )}
+                            {product.discount > 0 && (
+                              <span className="search-result-discount">{product.discount}% OFF</span>
+                            )}
+                          </div>
+                        </div>
+                        <ArrowRight size={15} className="search-result-arrow" />
+                      </div>
+                    ))}
+                    <button type="button" onClick={submitSearch} className="search-view-all-btn">
+                      View all results for "{query.trim()}" <ArrowRight size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  !searching && (
+                    <div className="search-empty-state">
+                      <p>No products found matching "{query.trim()}".</p>
+                      <div className="search-suggestions">
+                        <span>Try searching for:</span>
+                        <button type="button" onClick={() => setQuery('Nike')}>Nike</button>
+                        <button type="button" onClick={() => setQuery('Sneakers')}>Sneakers</button>
+                        <button type="button" onClick={() => setQuery('Running')}>Running</button>
+                        <button type="button" onClick={() => setQuery('Adidas')}>Adidas</button>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </header>
 
       {menuOpen && (
@@ -129,29 +300,6 @@ export default function Layout() {
               ))}
             </nav>
           </aside>
-        </div>
-      )}
-
-      {searchOpen && (
-        <div className="search-overlay" role="dialog" aria-modal="true" aria-label="Search products">
-          <button className="search-close" onClick={() => setSearchOpen(false)} aria-label="Close search">
-            <X />
-          </button>
-          <form onSubmit={submitSearch}>
-            <label htmlFor="site-search">What are you looking for?</label>
-            <div>
-              <input
-                id="site-search"
-                autoFocus
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search Nike, running, clogs…"
-              />
-              <button aria-label="Submit search">
-                <ArrowRight />
-              </button>
-            </div>
-          </form>
         </div>
       )}
 
@@ -207,26 +355,47 @@ export default function Layout() {
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
+                marginTop: '1px',
               }}
             >
               {toast.product.name}
             </div>
           </div>
-          <Link
-            to="/cart"
-            className="button primary"
-            style={{ padding: '0 0.85rem', minHeight: '34px', fontSize: '11px', whiteSpace: 'nowrap' }}
-            onClick={dismissToast}
-          >
-            View bag ({count})
-          </Link>
-          <button
-            onClick={dismissToast}
-            style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: '4px' }}
-            aria-label="Close notification"
-          >
-            <X size={16} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Link
+              to="/cart"
+              onClick={dismissToast}
+              style={{
+                background: '#ff4d23',
+                color: '#fff',
+                padding: '0.45rem 0.8rem',
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: 700,
+                textDecoration: 'none',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              View Bag
+            </Link>
+            <button
+              onClick={dismissToast}
+              style={{
+                background: 'transparent',
+                border: 0,
+                color: '#888',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+              aria-label="Dismiss notification"
+            >
+              <X size={15} />
+            </button>
+          </div>
         </aside>
       )}
 
@@ -236,50 +405,46 @@ export default function Layout() {
 
       <footer className="site-footer">
         <div className="footer-top">
-          <div>
-            <Link className="wordmark light" to="/">
-              SOLE<span>VAULT</span>
-            </Link>
-            <p>
-              Original footwear. Honest prices.
-              <br />
-              No compromise on style.
-            </p>
-          </div>
-          <div className="footer-cta">
-            <p>GET FIRST DIBS ON THE NEXT DROP</p>
-            <Link to="/shop?sort=newest">
-              Shop new arrivals <ArrowRight size={18} />
-            </Link>
-          </div>
+          <span className="wordmark light">
+            SOLE<span>VAULT</span>
+          </span>
+          <p>
+            Curated archive of original footwear at liquidation pricing. Every pair verified before dispatch.
+          </p>
         </div>
+
         <div className="footer-grid">
           <div>
-            <h3>Shop</h3>
+            <h3>Categories</h3>
             <Link to="/shop?category=sneakers">Sneakers</Link>
             <Link to="/shop?category=running">Running</Link>
-            <Link to="/shop?discount=50">Deals</Link>
+            <Link to="/shop?category=casual">Casual</Link>
+            <Link to="/shop?category=training">Training</Link>
           </div>
           <div>
-            <h3>Help</h3>
-            <Link to="/account">My account</Link>
-            <Link to="/shipping-policy">Shipping policy</Link>
-            <Link to="/refund-policy">Returns & refunds</Link>
+            <h3>Customer Service</h3>
+            <Link to="/shipping-policy">Shipping Policy</Link>
+            <Link to="/refund-policy">Returns & Refunds</Link>
+            <Link to="/terms-of-service">Terms of Service</Link>
+            <Link to="/privacy-policy">Privacy Policy</Link>
           </div>
           <div>
-            <h3>Our promise</h3>
-            <p>Every pair is brand new, quality checked and sourced for authenticity.</p>
+            <h3>Support & Legal</h3>
+            <p>100% Original Products. Verified Brand-New Inventory.</p>
+            <p>Support: support@solevault.in</p>
+            <p>Mon – Sat, 10:00 AM – 7:00 PM IST</p>
           </div>
         </div>
-        <div className="footer-legal">
-          <Link to="/privacy-policy">Privacy Policy</Link>
-          <Link to="/terms-of-service">Terms of Service</Link>
-          <Link to="/refund-policy">Refund Policy</Link>
-          <Link to="/shipping-policy">Shipping Policy</Link>
-        </div>
+
         <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} SOLEVAULT</span>
-          <span>Independent footwear reseller. No affiliation with featured brands.</span>
+          <span>&copy; {new Date().getFullYear()} SOLEVAULT. All rights reserved.</span>
+          <div className="footer-legal-links">
+            <Link to="/privacy-policy">Privacy</Link>
+            <Link to="/terms-of-service">Terms</Link>
+            <Link to="/refund-policy">Refunds</Link>
+            <Link to="/shipping-policy">Shipping</Link>
+          </div>
+          <span>Original Footwear. Guaranteed Authenticity.</span>
         </div>
       </footer>
     </div>
