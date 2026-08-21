@@ -1,4 +1,3 @@
-import { Heart, Plus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import type { Product } from '../types';
@@ -6,6 +5,7 @@ import { money, authHeaders } from '../lib/format';
 import { getProductImage, handleImageError } from '../lib/images';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+import { AnimatedHeart, AnimatedPlus } from './AnimatedIcons';
 
 export default function ProductCard({
   product,
@@ -60,11 +60,11 @@ export default function ProductCard({
           disabled={busy}
           aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
         >
-          <Heart size={18} fill={wishlisted ? 'currentColor' : 'none'} />
+          <AnimatedHeart size={18} active={wishlisted} />
         </button>
         {availableSize && (
           <button className="quick-add" onClick={() => addItem(product, availableSize, 1)}>
-            <Plus size={16} /> Quick add · UK {availableSize}
+            <AnimatedPlus size={16} /> Quick add · UK {availableSize}
           </button>
         )}
       </div>

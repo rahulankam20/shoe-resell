@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { Heart, Menu, Search, ShoppingBag, User, X, ArrowRight, Check, Loader2 } from 'lucide-react';
+import { Menu, X, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getProductImage, handleImageError } from '../lib/images';
 import { money } from '../lib/format';
 import type { Product } from '../types';
+import {
+  AnimatedSearch,
+  AnimatedBag,
+  AnimatedHeart,
+  AnimatedUser,
+  AnimatedClose,
+  AnimatedArrowRight,
+} from './AnimatedIcons';
 
 const navItems = [
   ['New Arrivals', '/shop?sort=newest'],
@@ -72,7 +80,7 @@ export default function Layout() {
         const res = await fetch(`/api/products?search=${encodeURIComponent(trimmed)}`);
         if (res.ok) {
           const data = await res.json();
-          setLiveResults(Array.isArray(data) ? data.slice(0, 5) : []);
+          setLiveResults(Array.isArray(data) ? data.slice(0, 6) : []);
         }
       } catch {
         setLiveResults([]);
@@ -136,7 +144,7 @@ export default function Layout() {
       </a>
       <div className="promo-bar">
         <span>100% ORIGINAL</span>
-        <strong>50–75% OFF MRP</strong>
+        <strong>AUTHENTIC FOOTWEAR · 50–75% OFF MRP</strong>
         <span>BRAND NEW</span>
       </div>
       <header className="site-header" ref={searchRef}>
@@ -160,16 +168,16 @@ export default function Layout() {
               aria-label={searchOpen ? 'Close search' : 'Open search'}
               className={`search-trigger-btn ${searchOpen ? 'active' : ''}`}
             >
-              {searchOpen ? <X size={20} /> : <Search size={20} />}
+              {searchOpen ? <AnimatedClose size={20} /> : <AnimatedSearch size={20} />}
             </button>
             <Link to="/wishlist" aria-label="Wishlist">
-              <Heart />
+              <AnimatedHeart size={20} />
             </Link>
             <Link to={user ? '/account' : '/login'} aria-label="Account">
-              <User />
+              <AnimatedUser size={20} />
             </Link>
             <Link className="cart-link" to="/cart" aria-label={`Cart with ${count} items`}>
-              <ShoppingBag />
+              <AnimatedBag size={20} />
               <span>{count}</span>
             </Link>
           </div>
@@ -179,7 +187,7 @@ export default function Layout() {
         {searchOpen && (
           <div className="search-dropdown-panel" role="dialog" aria-label="Quick search">
             <form onSubmit={submitSearch} className="search-form-row">
-              <Search className="search-input-icon" size={18} />
+              <AnimatedSearch className="search-input-icon" size={18} />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -241,11 +249,11 @@ export default function Layout() {
                             )}
                           </div>
                         </div>
-                        <ArrowRight size={15} className="search-result-arrow" />
+                        <AnimatedArrowRight size={15} className="search-result-arrow" />
                       </div>
                     ))}
                     <button type="button" onClick={submitSearch} className="search-view-all-btn">
-                      View all results for "{query.trim()}" <ArrowRight size={14} />
+                      View all results for "{query.trim()}" <AnimatedArrowRight size={14} />
                     </button>
                   </div>
                 ) : (
@@ -268,35 +276,29 @@ export default function Layout() {
         )}
       </header>
 
+      {/* Mobile Drawer */}
       {menuOpen && (
         <div className="mobile-drawer-backdrop" onClick={() => setMenuOpen(false)}>
-          <aside className="mobile-drawer" onClick={(event) => event.stopPropagation()} aria-label="Mobile navigation">
+          <aside className="mobile-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="drawer-head">
               <span className="wordmark">
                 SOLE<span>VAULT</span>
               </span>
               <button onClick={() => setMenuOpen(false)} aria-label="Close menu">
-                <X />
+                <AnimatedClose size={20} />
               </button>
             </div>
-            <p className="drawer-promo">
-              TOP BRANDS.
+            <div className="drawer-promo">
+              AUTHENTIC
               <br />
-              UNREAL PRICES.
-            </p>
+              DEADSTOCK.
+            </div>
             <nav>
               {navItems.map(([label, href]) => (
-                <Link
-                  key={label}
-                  to={href}
-                  onClick={(e) => {
-                    handleNavClick(href, e);
-                    setMenuOpen(false);
-                  }}
-                >
-                  {label}
-                  <ArrowRight size={18} />
-                </Link>
+                <NavLink key={label} to={href} onClick={() => setMenuOpen(false)}>
+                  <span>{label}</span>
+                  <AnimatedArrowRight size={15} />
+                </NavLink>
               ))}
             </nav>
           </aside>
@@ -393,7 +395,7 @@ export default function Layout() {
               }}
               aria-label="Dismiss notification"
             >
-              <X size={15} />
+              <AnimatedClose size={15} />
             </button>
           </div>
         </aside>
