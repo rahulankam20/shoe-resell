@@ -74,24 +74,76 @@ export function createSupabaseDb(client = supabase) {
       return data || [];
     },
     async getInventory(key) {
-      const keys = [key];
-      if (typeof key === 'string') {
-        if (key.includes(':')) keys.push(key.replace(':', '_'));
-        if (key.includes('_')) keys.push(key.replace('_', ':'));
+      if (!key) return null;
+      const canonical = String(key).replace('_', ':');
+      const legacy = String(key).replace(':', '_');
+
+      // 1. Try canonical format first (e.g. "1:8")
+      const { data: canonicalRow, error: canonicalErr } = await client
+        .from('inventory')
+        .select('*')
+        .eq('sku_key', canonical)
+        .maybeSingle();
+      if (canonicalErr) throw canonicalErr;
+      if (canonicalRow) return canonicalRow;
+
+      // 2. Fallback to legacy format (e.g. "1_8") if different
+      if (canonical !== legacy) {
+        const { data: legacyRow, error: legacyErr } = await client
+          .from('inventory')
+          .select('*')
+          .eq('sku_key', legacy)
+          .maybeSingle();
+        if (legacyErr) throw legacyErr;
+        if (!legacyRow) return null;
+
+        // Self-heal: update legacy row to canonical format under version lock
+        try {
+          const { data: healed } = await client
+            .from('inventory')
+            .update({ sku_key: canonical, version: Number(legacyRow.version) + 1 })
+            .eq('sku_key', legacy)
+            .eq('version', legacyRow.version)
+            .select()
+            .maybeSingle();
+          return healed || { ...legacyRow, sku_key: canonical };
+        } catch {
+          return legacyRow;
+        }
       }
-      const { data, error } = await client.from('inventory').select('*').in('sku_key', keys).maybeSingle();
-      if (error) throw error;
-      return data;
+
+      return null;
     },
     async updateInventory(key, version, patch) {
-      const keys = [key];
-      if (typeof key === 'string') {
-        if (key.includes(':')) keys.push(key.replace(':', '_'));
-        if (key.includes('_')) keys.push(key.replace('_', ':'));
+      if (!key) return null;
+      const canonical = String(key).replace('_', ':');
+      const legacy = String(key).replace(':', '_');
+
+      // 1. Try updating canonical format
+      const { data: canonicalUpdated, error: canonicalErr } = await client
+        .from('inventory')
+        .update({ ...patch, sku_key: canonical })
+        .eq('sku_key', canonical)
+        .eq('version', version)
+        .select()
+        .maybeSingle();
+      if (canonicalErr) throw canonicalErr;
+      if (canonicalUpdated) return canonicalUpdated;
+
+      // 2. Try updating legacy format and heal to canonical
+      if (canonical !== legacy) {
+        const { data: legacyUpdated, error: legacyErr } = await client
+          .from('inventory')
+          .update({ ...patch, sku_key: canonical })
+          .eq('sku_key', legacy)
+          .eq('version', version)
+          .select()
+          .maybeSingle();
+        if (legacyErr) throw legacyErr;
+        if (legacyUpdated) return legacyUpdated;
       }
-      const { data, error } = await client.from('inventory').update(patch).in('sku_key', keys).eq('version', version).select().maybeSingle();
-      if (error) throw error;
-      return data;
+
+      return null;
     },
     async upsertInventory(row) {
       const { data, error } = await client.from('inventory').upsert(row, { onConflict: 'sku_key' }).select().single();

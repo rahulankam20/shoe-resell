@@ -24,9 +24,8 @@ export function applySecurityHeaders(req, res, methods = 'GET, POST, PUT, DELETE
   if (origin && originAllowed(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
   }
+
   res.setHeader('Access-Control-Allow-Methods', methods);
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Idempotency-Key, X-Reconcile-Secret');
   res.setHeader('Access-Control-Max-Age', '86400');
@@ -35,6 +34,12 @@ export function applySecurityHeaders(req, res, methods = 'GET, POST, PUT, DELETE
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  const isHttps = req.headers?.['x-forwarded-proto'] === 'https' || req.connection?.encrypted;
+  if (isHttps) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
 }
 
 export function cors(res, req, methods) {

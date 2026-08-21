@@ -65,13 +65,42 @@ export function createMemoryDb(seed = {}) {
       return clone(state.orders.filter((row) => row.payment_status === 'PAYMENT_PENDING'));
     },
     async getInventory(key) {
-      return clone(state.inventory.find((row) => row.sku_key === key) || null);
+      if (!key) return null;
+      const canonical = String(key).replace('_', ':');
+      const legacy = String(key).replace(':', '_');
+
+      const canonicalRow = state.inventory.find((row) => row.sku_key === canonical);
+      if (canonicalRow) return clone(canonicalRow);
+
+      if (canonical !== legacy) {
+        const legacyRow = state.inventory.find((row) => row.sku_key === legacy);
+        if (legacyRow) {
+          legacyRow.sku_key = canonical;
+          legacyRow.version = Number(legacyRow.version) + 1;
+          return clone(legacyRow);
+        }
+      }
+      return null;
     },
     async updateInventory(key, version, patch) {
-      const row = state.inventory.find((entry) => entry.sku_key === key && entry.version === version);
-      if (!row) return null;
-      Object.assign(row, patch);
-      return clone(row);
+      if (!key) return null;
+      const canonical = String(key).replace('_', ':');
+      const legacy = String(key).replace(':', '_');
+
+      const canonicalRow = state.inventory.find((row) => row.sku_key === canonical && row.version === version);
+      if (canonicalRow) {
+        Object.assign(canonicalRow, patch, { sku_key: canonical });
+        return clone(canonicalRow);
+      }
+
+      if (canonical !== legacy) {
+        const legacyRow = state.inventory.find((row) => row.sku_key === legacy && row.version === version);
+        if (legacyRow) {
+          Object.assign(legacyRow, patch, { sku_key: canonical });
+          return clone(legacyRow);
+        }
+      }
+      return null;
     },
     async upsertInventory(row) {
       const existing = state.inventory.find((entry) => entry.sku_key === row.sku_key);
