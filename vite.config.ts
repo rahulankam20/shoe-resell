@@ -89,5 +89,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss(), apiDevPlugin()],
     envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
     define: processEnvDefines,
+    server: {
+      host: '0.0.0.0',
+    },
   };
 });

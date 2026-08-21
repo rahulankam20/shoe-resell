@@ -49,6 +49,7 @@ export default function HomePage() {
       >
         {/* Story Overlay Layer — Positioned below sticky header with generous padding */}
         <div
+          className="hero-sequence-overlay"
           style={{
             position: 'absolute',
             inset: 0,
@@ -64,6 +65,7 @@ export default function HomePage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', gap: '1rem' }}>
             {/* Top Left: Active Chapter Brand Badge */}
             <div
+              className="hero-telemetry-card"
               style={{
                 background: 'rgba(15, 15, 15, 0.85)',
                 backdropFilter: 'blur(16px)',
@@ -109,6 +111,7 @@ export default function HomePage() {
 
             {/* Top Right: 360° Rotation Telemetry Gauge */}
             <div
+              className="hero-rotation-card"
               style={{
                 background: 'rgba(15, 15, 15, 0.85)',
                 backdropFilter: 'blur(16px)',
@@ -132,6 +135,7 @@ export default function HomePage() {
 
           {/* Bottom Dock: Dynamic Call To Action and Navigation */}
           <div
+            className="hero-sequence-dock"
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -143,6 +147,7 @@ export default function HomePage() {
           >
             {/* Action Bar */}
             <div
+              className="hero-action-bar"
               style={{
                 background: 'rgba(12, 12, 12, 0.85)',
                 backdropFilter: 'blur(20px)',
