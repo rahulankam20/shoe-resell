@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ArrowDown, ArrowRight, BadgeCheck, Box, CreditCard, Gem, SearchCheck, ShieldCheck, Sparkles, Compass } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowRight, BadgeCheck, Box, Heart, Layers3, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import ScrollSequence from '../components/ScrollSequence';
 import ProductCard from '../components/ProductCard';
-import { ErrorState, LoadingState } from '../components/StatePanel';
+import { useCart } from '../contexts/CartContext';
+import { money } from '../lib/format';
+import { getAeroAvailableSizes, getAeroHeroProduct, getAeroInitialSize } from '../lib/aeroGallery';
 import { getProductImage, handleImageError, BRAND_FALLBACKS } from '../lib/images';
+import { ErrorState, LoadingState } from '../components/StatePanel';
 import type { Brand, Category, Product } from '../types';
 
 interface Storefront {
@@ -14,18 +16,79 @@ interface Storefront {
   deals: Product[];
 }
 
+function AeroProductRail({ product }: { product: Product }) {
+  const { addItem } = useCart();
+  const availableSizes = useMemo(() => getAeroAvailableSizes(product), [product]);
+  const [selectedSize, setSelectedSize] = useState(() => getAeroInitialSize(product));
+
+  useEffect(() => {
+    setSelectedSize(getAeroInitialSize(product));
+  }, [product]);
+
+  const canAddToCart = Boolean(selectedSize && availableSizes.includes(selectedSize));
+
+  return (
+    <aside className="aero-product-rail" aria-label={`${product.brand} ${product.name} purchase options`}>
+      <div className="aero-rail-topline">
+        <span className="aero-verified-inline"><BadgeCheck size={15} /> Studio verified</span>
+        <Link to={`/wishlist`} aria-label="View wishlist"><Heart size={17} /></Link>
+      </div>
+      <p className="aero-product-brand">{product.brand}</p>
+      <Link to={`/product/${product.slug}`} className="aero-product-name">
+        {product.name}
+      </Link>
+      <p className="aero-product-meta">{product.category} · {product.gender}</p>
+      <div className="aero-rail-divider" />
+      <div className="aero-size-heading">
+        <span>Size</span>
+        <Link to={`/product/${product.slug}`}>Size guide</Link>
+      </div>
+      <div className="aero-size-grid" role="group" aria-label="Select a size">
+        {product.sizes.map((size) => {
+          const isAvailable = availableSizes.includes(size);
+          const isSelected = selectedSize === size;
+          return (
+            <button
+              key={size}
+              type="button"
+              className={isSelected ? 'selected' : ''}
+              disabled={!isAvailable}
+              aria-pressed={isSelected}
+              onClick={() => setSelectedSize(size)}
+            >
+              {size}
+            </button>
+          );
+        })}
+      </div>
+      <div className="aero-rail-price">
+        <span>Price</span>
+        <strong>{money(product.sale_price)}</strong>
+      </div>
+      <div className="aero-auth-line"><BadgeCheck size={15} /> Authenticated · Original box · Accessories</div>
+      <button
+        className="aero-add-button"
+        type="button"
+        disabled={!canAddToCart}
+        onClick={() => canAddToCart && addItem(product, selectedSize, 1)}
+      >
+        Add to archive <ArrowRight size={17} />
+      </button>
+    </aside>
+  );
+}
+
 export default function HomePage() {
   const [data, setData] = useState<Storefront | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [progress, setProgress] = useState(0);
 
   const fetchStorefront = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const response = await fetch('/api/storefront');
-      if (!response.ok) throw new Error('The vault could not be opened');
+      if (!response.ok) throw new Error('The gallery could not be opened');
       setData(await response.json());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -38,341 +101,97 @@ export default function HomePage() {
     fetchStorefront();
   }, [fetchStorefront]);
 
-  const rotationDeg = Math.round(progress * 360);
+  const heroProduct = getAeroHeroProduct(data?.featured, data?.deals);
+  const studyProducts = data?.featured.slice(0, 3) ?? [];
 
   return (
-    <>
-      <ScrollSequence
-        fallbackImage="/images/solevault-hero.webp"
-        alt="Premium sneaker 360 interactive rotation"
-        onProgress={setProgress}
-      >
-        {/* Story Overlay Layer — Positioned below sticky header with generous padding */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            zIndex: 10,
-            padding: 'clamp(6.5rem, 11vh, 8.5rem) clamp(1.5rem, 4vw, 4rem) clamp(2rem, 5vh, 4rem)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* Top Bar: Telemetry & Interactive Chapter Stepper */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', gap: '1rem' }}>
-            {/* Top Left: Active Chapter Brand Badge */}
-            <div
-              style={{
-                background: 'rgba(15, 15, 15, 0.85)',
-                backdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                borderRadius: '8px',
-                padding: '0.85rem 1.25rem',
-                color: '#fff',
-                maxWidth: '420px',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-                pointerEvents: 'auto',
-                transition: 'all 0.4s ease',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', letterSpacing: '0.15em', fontWeight: 800, color: '#ff4d23', textTransform: 'uppercase', marginBottom: '4px' }}>
-                <Sparkles size={13} />
-                {progress < 0.28
-                  ? '01 · 360° PRECISION REVEAL'
-                  : progress < 0.55
-                  ? '02 · ANATOMY & CRAFT'
-                  : progress < 0.82
-                  ? '03 · VALUE REVOLUTION'
-                  : '04 · VAULT UNLOCKED'}
-              </div>
-              <h2 style={{ fontSize: 'clamp(1.1rem, 1.8vw, 1.5rem)', fontWeight: 900, letterSpacing: '-0.03em', margin: 0, textTransform: 'uppercase', lineHeight: 1.1 }}>
-                {progress < 0.28
-                  ? 'DEADSTOCK ICON.'
-                  : progress < 0.55
-                  ? 'ENGINEERED DETAIL.'
-                  : progress < 0.82
-                  ? 'UP TO 75% OFF.'
-                  : 'YOUR PAIR AWAITS.'}
-              </h2>
-              <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#bbb', lineHeight: 1.5 }}>
-                {progress < 0.28
-                  ? '100% genuine sneakers hand-inspected before entering the vault.'
-                  : progress < 0.55
-                  ? 'Precision stitch work, responsive cushioning & archival colorways.'
-                  : progress < 0.82
-                  ? 'Direct-from-source pricing without retail hype taxes.'
-                  : 'Instant Cashfree UPI checkout with real-time stock protection.'}
-              </p>
-            </div>
-
-            {/* Top Right: 360° Rotation Telemetry Gauge */}
-            <div
-              style={{
-                background: 'rgba(15, 15, 15, 0.85)',
-                backdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                borderRadius: '8px',
-                padding: '0.6rem 1rem',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                fontSize: '11px',
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                pointerEvents: 'auto',
-              }}
-            >
-              <Compass size={15} style={{ color: '#ff4d23', transform: `rotate(${rotationDeg}deg)`, transition: 'transform 0.1s linear' }} />
-              <span>{rotationDeg}° ROTATION</span>
-            </div>
-          </div>
-
-          {/* Bottom Dock: Dynamic Call To Action and Navigation */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: '1rem',
-              width: '100%',
-              pointerEvents: 'auto',
-            }}
-          >
-            {/* Action Bar */}
-            <div
-              style={{
-                background: 'rgba(12, 12, 12, 0.85)',
-                backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                borderRadius: '10px',
-                padding: '1rem 1.5rem',
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '1.25rem',
-                width: '100%',
-                maxWidth: '850px',
-                boxShadow: '0 25px 50px rgba(0,0,0,0.6)',
-              }}
-            >
-              <div>
-                <span style={{ fontSize: '10px', letterSpacing: '0.18em', color: '#ff4d23', fontWeight: 800, textTransform: 'uppercase' }}>
-                  ORIGINAL FOOTWEAR · UNREAL PRICES
-                </span>
-                <div style={{ fontSize: 'clamp(1rem, 1.5vw, 1.25rem)', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>
-                  {progress > 0.75 ? 'READY TO UPGRADE YOUR ROTATION?' : 'SCROLL TO EXPLORE EVERY ANGLE'}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <Link
-                  className="button primary"
-                  to="/shop"
-                  style={{ minHeight: '42px', padding: '0 1.2rem', fontSize: '10px' }}
-                >
-                  Shop Collection <ArrowRight size={15} />
-                </Link>
-                <Link
-                  className="button ghost-light"
-                  to="/shop?discount=50&sort=discount"
-                  style={{ minHeight: '42px', padding: '0 1.2rem', fontSize: '10px' }}
-                >
-                  Steals 50–75% Off
-                </Link>
-              </div>
-            </div>
-
-            {/* Scroll Indicator Cue */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#888', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              <ArrowDown size={14} style={{ color: '#ff4d23' }} />
-              <span>Scroll down to rotate sneaker · {Math.round(progress * 100)}% viewed</span>
-            </div>
-          </div>
-        </div>
-      </ScrollSequence>
-
-      {/* Brand Manifesto */}
-      <section className="manifesto section-pad">
-        <p className="section-index">01 / The SOLEVAULT difference</p>
-        <div>
-          <h2>
-            THE PAIRS YOU WANT.
-            <br />
-            <span>THE PRICES YOU DIDN'T EXPECT.</span>
-          </h2>
-          <p>
-            We source 100% brand-new, authenticated footwear directly from verified distribution channels, inspect every sole and stitch, and price it without the retail hype markups.
-          </p>
-        </div>
-      </section>
-
-      {loading && <LoadingState label="Curating the collection" />}
+    <div className="aero-gallery-home">
+      {loading && <LoadingState label="Curating the gallery" />}
       {error && <ErrorState message={error} retry={fetchStorefront} />}
 
-      {data && (
+      {data && !heroProduct && (
+        <section className="aero-empty-state" aria-labelledby="aero-empty-title">
+          <p className="aero-eyebrow">Aero Gallery</p>
+          <h1 id="aero-empty-title">A new collection is being prepared.</h1>
+          <p>The gallery is live, but no featured object is available to display yet. Browse the complete archive instead.</p>
+          <Link className="aero-hero-cta" to="/shop">
+            Explore the collection <ArrowRight size={18} />
+          </Link>
+        </section>
+      )}
+
+      {data && heroProduct && (
         <>
-          {/* Brand Grid */}
-          <section className="brand-section section-pad" id="brands">
-            <div className="section-head">
-              <div>
-                <p className="eyebrow accent">THE NAMES YOU KNOW</p>
-                <h2>
-                  BIG BRANDS.
-                  <br />
-                  BETTER NUMBERS.
-                </h2>
-              </div>
-              <Link className="text-link" to="/shop">
-                View all brands <ArrowRight />
+          <section className="aero-hero" aria-labelledby="aero-title">
+            <div className="aero-hero-copy aero-reveal">
+              <p className="aero-eyebrow">Aero Gallery</p>
+              <h1 id="aero-title">The art of<br />the everyday</h1>
+              <p className="aero-intro">
+                Curated icons. Timeless design. Verified authenticity. Elevating the everyday into something worth collecting.
+              </p>
+              <Link className="aero-hero-cta" to="/shop">
+                Explore the collection <ArrowRight size={18} />
               </Link>
             </div>
-            <div className="brand-grid">
-              {data.brands.map((brand, index) => {
-                const bHero = brand.hero_image || BRAND_FALLBACKS[brand.slug] || '/images/solevault-hero.webp';
-                return (
-                  <Link className="brand-card" key={brand.id || brand.slug} to={`/shop?brand=${brand.slug}`}>
-                    <img
-                      src={bHero}
-                      alt={brand.name}
-                      loading="lazy"
-                      onError={(e) => handleImageError(e, '/images/solevault-hero.webp')}
-                    />
-                    <div className="brand-overlay">
-                      <span>0{index + 1}</span>
-                      <h3>{brand.name}</h3>
-                      <p>{brand.product_count} pairs in the vault</p>
-                      <ArrowRight />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
 
-          {/* Categories Strip */}
-          <section className="category-section section-pad" id="categories">
-            <div className="section-head">
-              <div>
-                <p className="eyebrow">SHOP BY MOVEMENT</p>
-                <h2>
-                  MADE FOR
-                  <br />
-                  YOUR EVERY DAY.
-                </h2>
-              </div>
-            </div>
-            <div className="category-strip">
-              {data.categories.map((category) => {
-                const catImg = category.image || `/images/category-${category.slug}.jpg`;
-                return (
-                  <Link key={category.id || category.slug} className="category-card" to={`/shop?category=${category.slug}`}>
-                    <img
-                      src={catImg}
-                      alt={`${category.name} footwear`}
-                      loading="lazy"
-                      onError={(e) => handleImageError(e, '/images/category-sneakers.jpg')}
-                    />
-                    <div>
-                      <p>{category.description || 'Verified Footwear'}</p>
-                      <h3>{category.name}</h3>
-                      <ArrowRight />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Deal Banner */}
-          <section className="deal-banner">
-            <div className="deal-image">
+            <div className="aero-object-stage" aria-label={`${heroProduct.brand} ${heroProduct.name} in the Aero Gallery`}>
+              <div className="aero-disc" />
+              <div className="aero-window-light" />
+              <div className="aero-plinth" />
               <img
-                src={data.deals[0] ? getProductImage(data.deals[0]) : '/images/products/adidas-ultraboost.jpg'}
-                alt="Featured footwear deal"
-                loading="lazy"
-                onError={(e) => handleImageError(e, '/images/products/adidas-ultraboost.jpg')}
+                className="aero-hero-shoe"
+                src={getProductImage(heroProduct)}
+                alt={`${heroProduct.brand} ${heroProduct.name}`}
+                onError={(event) => handleImageError(event, '/images/solevault-hero.webp')}
               />
             </div>
-            <div className="deal-copy">
-              <p className="eyebrow accent">THE PRICE DROP</p>
-              <h2>
-                BIG BRANDS.
-                <br />
-                <span>SMALLER PRICES.</span>
-              </h2>
-              <p>
-                Past-season icons and current essentials. Always brand new. Always checked. Never ordinary.
-              </p>
-              <Link className="button primary" to="/shop?discount=50&sort=discount">
-                Shop 50–75% off <ArrowRight size={18} />
-              </Link>
-            </div>
+
+            <AeroProductRail product={heroProduct} />
           </section>
 
-          {/* Trust Value Props */}
-          <section className="trust-section section-pad">
-            <p className="section-index">02 / Why shop SOLEVAULT</p>
-            <div className="trust-grid">
-              {[
-                [BadgeCheck, '100% ORIGINAL', 'Sourced with care'],
-                [Box, 'BRAND NEW', 'Unworn. Box fresh.'],
-                [Gem, '50–75% OFF MRP', 'Premium without the premium'],
-                [SearchCheck, 'QUALITY CHECKED', 'Every pair inspected'],
-                [ShieldCheck, 'SECURE SHOPPING', 'Protected from cart to door'],
-              ].map(([Icon, title, copy]) => {
-                const TrustIcon = Icon as typeof BadgeCheck;
-                return (
-                  <div className="trust-item" key={String(title)}>
-                    <TrustIcon />
-                    <h3>{String(title)}</h3>
-                    <p>{String(copy)}</p>
-                  </div>
-                );
-              })}
+          <section className="aero-studies" aria-labelledby="aero-studies-title">
+            <div className="aero-studies-copy">
+              <p className="aero-eyebrow">Curated studies</p>
+              <h2 id="aero-studies-title">Objects with<br />a point of view.</h2>
+              <Link to="/shop" className="aero-text-link">View all <ArrowRight size={17} /></Link>
             </div>
-          </section>
-
-          {/* Featured Product Grid */}
-          <section className="featured-section section-pad">
-            <div className="section-head">
-              <div>
-                <p className="eyebrow accent">CURATED THIS WEEK</p>
-                <h2>THE STEALS EDIT.</h2>
-              </div>
-              <Link className="text-link" to="/shop?sort=popular">
-                Shop the edit <ArrowRight />
-              </Link>
-            </div>
-            <div className="product-grid">
-              {data.featured.slice(0, 4).map((product) => (
-                <ProductCard key={product.id} product={product} />
+            <div className="aero-study-grid">
+              {studyProducts.map((product, index) => (
+                <div className="aero-study-card" key={product.id}>
+                  <span className="aero-study-index">0{index + 1}</span>
+                  {index === 0 && <span className="aero-featured-tag">Featured</span>}
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
           </section>
 
-          {/* Final CTA */}
-          <section className="final-cta">
-            <div>
-              <p className="eyebrow">THE NEXT STEP IS YOURS</p>
-              <h2>
-                YOUR NEXT PAIR
-                <br />
-                SHOULDN'T COST
-                <br />
-                <span>A FORTUNE.</span>
-              </h2>
-              <Link className="button light" to="/shop">
-                Enter the vault <ArrowRight />
-              </Link>
-            </div>
-            <CreditCard className="cta-mark" aria-hidden="true" />
+          <section className="aero-collection-strip" aria-label="Gallery repertoire">
+            {data.brands.slice(0, 4).map((brand) => {
+              const image = brand.hero_image || BRAND_FALLBACKS[brand.slug] || '/images/solevault-hero.webp';
+              return (
+                <Link className="aero-brand-study" key={brand.id || brand.slug} to={`/shop?brand=${brand.slug}`}>
+                  <img src={image} alt={`${brand.name} collection`} onError={(event) => handleImageError(event, '/images/solevault-hero.webp')} />
+                  <div><span>Archive</span><strong>{brand.name}</strong><ArrowRight size={17} /></div>
+                </Link>
+              );
+            })}
+          </section>
+
+          <section className="aero-assurance" aria-label="SoleVault gallery assurance">
+            <div><BadgeCheck size={22} /><span><strong>Studio verified</strong>Every pair is inspected before it enters the archive.</span></div>
+            <div><Box size={22} /><span><strong>Preserved condition</strong>Original packaging details are displayed with each object.</span></div>
+            <div><Sparkles size={22} /><span><strong>Curated selection</strong>Current inventory, connected to the same live storefront data.</span></div>
+          </section>
+
+          <section className="aero-motion-band" aria-label="Aero Gallery motion system">
+            <p>Scroll behavior</p>
+            <div><Box size={20} /><span>Plinth lift <b>· 5%</b></span></div>
+            <div><Layers3 size={20} /><span>Caption stagger <b>· 60ms</b></span></div>
+            <div><Sparkles size={20} /><span>Card elevation <b>· 180ms</b></span></div>
           </section>
         </>
       )}
-    </>
+    </div>
   );
 }
