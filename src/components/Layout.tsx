@@ -5,10 +5,12 @@ import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getProductImage, handleImageError } from '../lib/images';
 import { money } from '../lib/format';
+import CookieConsent from './CookieConsent';
 import type { Product } from '../types';
 
 const navItems = [
   ['New Arrivals', '/shop?sort=newest'],
+  ['Aero Gallery', '/gallery'],
   ['Sneakers', '/shop?category=sneakers'],
   ['Running', '/shop?category=running'],
   ['Casual', '/shop?category=casual'],
@@ -415,14 +417,17 @@ export default function Layout() {
 
         <div className="footer-grid">
           <div>
-            <h3>Categories</h3>
+            <h3>Categories & Explore</h3>
+            <Link to="/gallery">Aero Gallery</Link>
             <Link to="/shop?category=sneakers">Sneakers</Link>
             <Link to="/shop?category=running">Running</Link>
             <Link to="/shop?category=casual">Casual</Link>
             <Link to="/shop?category=training">Training</Link>
           </div>
           <div>
-            <h3>Customer Service</h3>
+            <h3>Company & Help</h3>
+            <Link to="/about">About SOLEVAULT</Link>
+            <Link to="/faqs">FAQs & Support</Link>
             <Link to="/shipping-policy">Shipping Policy</Link>
             <Link to="/refund-policy">Returns & Refunds</Link>
             <Link to="/terms-of-service">Terms of Service</Link>
@@ -439,6 +444,8 @@ export default function Layout() {
         <div className="footer-bottom">
           <span>&copy; {new Date().getFullYear()} SOLEVAULT. All rights reserved.</span>
           <div className="footer-legal-links">
+            <Link to="/about">About</Link>
+            <Link to="/faqs">FAQs</Link>
             <Link to="/privacy-policy">Privacy</Link>
             <Link to="/terms-of-service">Terms</Link>
             <Link to="/refund-policy">Refunds</Link>
@@ -447,6 +454,9 @@ export default function Layout() {
           <span>Original Footwear. Guaranteed Authenticity.</span>
         </div>
       </footer>
+
+      {/* Global GDPR/Cookie Consent Banner (suppressed on admin) */}
+      {!location.pathname.startsWith('/admin') && <CookieConsent />}
     </div>
   );
 }

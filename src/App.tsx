@@ -20,6 +20,9 @@ const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'));
 const RefundPolicyPage = lazy(() => import('./pages/RefundPolicyPage'));
 const ShippingPolicyPage = lazy(() => import('./pages/ShippingPolicyPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const FAQsPage = lazy(() => import('./pages/FAQsPage'));
+const AeroGalleryPage = lazy(() => import('./pages/AeroGalleryPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 export default function App() {
@@ -74,6 +77,10 @@ export default function App() {
                     </AdminRoute>
                   }
                 />
+                <Route path="about" element={<AboutPage />} />
+                <Route path="faqs" element={<FAQsPage />} />
+                <Route path="gallery" element={<AeroGalleryPage />} />
+                <Route path="aero-gallery" element={<AeroGalleryPage />} />
                 <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
                 <Route path="terms-of-service" element={<TermsOfServicePage />} />
                 <Route path="refund-policy" element={<RefundPolicyPage />} />

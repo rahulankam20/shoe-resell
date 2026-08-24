@@ -3,9 +3,16 @@ import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { EmptyState, ErrorState, LoadingState } from '../components/StatePanel';
 import { authHeaders } from '../lib/format';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 import type { Product } from '../types';
 
 export default function WishlistPage() {
+  useSEOMeta({
+    title: 'Saved Pairs & Wishlist | SOLEVAULT',
+    description: 'Your saved sneaker grails and favorite silhouettes on SOLEVAULT.',
+    url: '/wishlist',
+  });
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

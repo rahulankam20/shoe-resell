@@ -1,0 +1,21 @@
+# Robots.txt for SOLEVAULT (https://shoe-resell.vercel.app)
+User-agent: *
+Allow: /
+Allow: /shop
+Allow: /product/
+Allow: /gallery
+Allow: /aero-gallery
+Allow: /about
+Allow: /faqs
+Allow: /privacy-policy
+Allow: /terms-of-service
+Allow: /refund-policy
+Allow: /shipping-policy
+
+Disallow: /admin
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+Disallow: /api/
+
+Sitemap: https://shoe-resell.vercel.app/sitemap.xml

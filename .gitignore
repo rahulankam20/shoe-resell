@@ -25,5 +25,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.zip
 .vite-source-tags.js
 .vercel
+public/sitemap.xml

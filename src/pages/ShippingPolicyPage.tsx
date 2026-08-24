@@ -1,7 +1,13 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 
 export default function ShippingPolicyPage() {
+  useSEOMeta({
+    title: 'Shipping Policy | SOLEVAULT',
+    description: 'Learn about SOLEVAULT delivery rates, pan-India timelines, double-box packaging standards, and order tracking.',
+    url: '/shipping-policy',
+  });
   return (
     <div className="page-shell legal-page">
       <Link className="back-link" to="/"><ArrowLeft size={16} /> Back to SOLEVAULT</Link>

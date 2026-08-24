@@ -5,11 +5,18 @@ import supabase from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { authHeaders, dateLabel, money } from '../lib/format';
 import { EmptyState, LoadingState } from '../components/StatePanel';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 import type { Address, Order, Profile } from '../types';
 
 const blank: Address = { label: 'Home', full_name: '', phone: '', line1: '', line2: '', city: '', state: '', postal_code: '', is_default: false };
 
 export default function AccountPage() {
+  useSEOMeta({
+    title: 'My Account & Orders | SOLEVAULT',
+    description: 'Track orders, manage addresses, and view your verified sneaker purchases in the SOLEVAULT Member Vault.',
+    url: '/account',
+  });
+
   const { profile, refreshProfile } = useAuth();
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || 'profile';

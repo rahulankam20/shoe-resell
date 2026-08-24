@@ -1,7 +1,13 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 
 export default function TermsOfServicePage() {
+  useSEOMeta({
+    title: 'Terms of Service | SOLEVAULT',
+    description: 'Read the terms and conditions governing the purchase of authentic sneakers, payments, delivery, and use of the SOLEVAULT platform.',
+    url: '/terms-of-service',
+  });
   return (
     <div className="page-shell legal-page">
       <Link className="back-link" to="/"><ArrowLeft size={16} /> Back to SOLEVAULT</Link>

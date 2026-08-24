@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && node scripts/audit-client-bundle.mjs",
+    "build": "node scripts/generate-sitemap.mjs && tsc -b && vite build && node scripts/audit-client-bundle.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node --test server/__tests__/payment.test.js server/__tests__/webhook-raw-body.test.js server/__tests__/security.test.js"

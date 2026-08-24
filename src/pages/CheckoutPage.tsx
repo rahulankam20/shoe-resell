@@ -5,6 +5,7 @@ import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { authHeaders, money } from '../lib/format';
 import { getProductImage, handleImageError } from '../lib/images';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 import type { Address } from '../types';
 
 const emptyAddress: Address = { label: 'Home', full_name: '', phone: '', line1: '', line2: '', city: '', state: '', postal_code: '', is_default: true };
@@ -39,6 +40,12 @@ function loadCashfreeSdk() {
 }
 
 export default function CheckoutPage() {
+  useSEOMeta({
+    title: 'Secure Checkout | SOLEVAULT',
+    description: 'Complete your authentic sneaker purchase safely with end-to-end encryption and verified UPI.',
+    url: '/checkout',
+  });
+
   const { items, mrpTotal, discount, shipping, total, clearCart } = useCart();
   const { user, profile } = useAuth();
   const [address, setAddress] = useState<Address>({ ...emptyAddress, full_name: profile?.full_name || '', phone: profile?.phone || '' });

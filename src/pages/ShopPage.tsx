@@ -3,10 +3,30 @@ import { ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { EmptyState, ErrorState, LoadingState } from '../components/StatePanel';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 import type { Brand, Category, Product } from '../types';
 
 export default function ShopPage() {
   const [params, setParams] = useSearchParams();
+
+  const activeCategory = params.get('category');
+  const activeBrand = params.get('brand');
+  const activeSearch = params.get('search');
+
+  const pageTitle = activeCategory
+    ? `Shop ${activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)} | SOLEVAULT`
+    : activeBrand
+    ? `Shop ${activeBrand.charAt(0).toUpperCase() + activeBrand.slice(1)} | SOLEVAULT`
+    : activeSearch
+    ? `Search results for "${activeSearch}" | SOLEVAULT`
+    : 'Shop The Vault Collection | SOLEVAULT';
+
+  useSEOMeta({
+    title: pageTitle,
+    description: 'Browse authentic sneakers, running shoes, and street classics with 50–75% off MRP. All pairs 100% verified original.',
+    url: `/shop${params.toString() ? `?${params.toString()}` : ''}`,
+  });
+
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
