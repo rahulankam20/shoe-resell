@@ -1,7 +1,13 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 
 export default function RefundPolicyPage() {
+  useSEOMeta({
+    title: 'Refund & Returns Policy | SOLEVAULT',
+    description: 'Understand the SOLEVAULT return window, 100% money-back authenticity guarantee, and refund procedures.',
+    url: '/refund-policy',
+  });
   return (
     <div className="page-shell legal-page">
       <Link className="back-link" to="/"><ArrowLeft size={16} /> Back to SOLEVAULT</Link>

@@ -4,6 +4,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import supabase from '../lib/supabase';
 import { signInWithGoogle } from '../lib/googleAuth';
 import { useAuth } from '../contexts/AuthContext';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 
 function isRateLimitError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false;
@@ -21,6 +22,13 @@ function isRateLimitError(err: unknown): boolean {
 
 export default function AuthPage() {
   const [signUp, setSignUp] = useState(false);
+
+  useSEOMeta({
+    title: signUp ? 'Create Account | SOLEVAULT' : 'Sign In | SOLEVAULT',
+    description: 'Sign in or create your SOLEVAULT account to buy authentic sneakers, access drop notifications, and track orders.',
+    url: '/login',
+  });
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');

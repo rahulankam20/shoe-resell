@@ -6,11 +6,28 @@ import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { authHeaders, money } from '../lib/format';
 import { getProductImage, handleImageError } from '../lib/images';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 import type { Product } from '../types';
 
 export default function ProductPage() {
   const { slug } = useParams();
   const [product, setProduct] = useState<Product | null>(null);
+
+  const seoTitle = product
+    ? `${product.brand} ${product.name} | Buy Authentic Sneakers | SOLEVAULT`
+    : 'Sneaker Details | SOLEVAULT';
+  const seoDesc = product?.description
+    ? product.description.slice(0, 160)
+    : '100% verified original deadstock sneaker pair from the SOLEVAULT curated liquidation archive.';
+  const seoImage = product ? getProductImage(product, 0) : undefined;
+
+  useSEOMeta({
+    title: seoTitle,
+    description: seoDesc,
+    image: seoImage,
+    url: `/product/${slug || ''}`,
+    type: 'product',
+  });
   const [selectedImage, setSelectedImage] = useState(0);
   const [size, setSize] = useState('');
   const [quantity, setQuantity] = useState(1);

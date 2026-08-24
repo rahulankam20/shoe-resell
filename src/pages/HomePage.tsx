@@ -5,6 +5,7 @@ import ScrollSequence from '../components/ScrollSequence';
 import ProductCard from '../components/ProductCard';
 import { ErrorState, LoadingState } from '../components/StatePanel';
 import { getProductImage, handleImageError, BRAND_FALLBACKS } from '../lib/images';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 import type { Brand, Category, Product } from '../types';
 
 interface Storefront {
@@ -15,6 +16,12 @@ interface Storefront {
 }
 
 export default function HomePage() {
+  useSEOMeta({
+    title: 'Buy & Sell Premium Sneakers | SOLEVAULT',
+    description: 'Authentic sneaker marketplace offering curated original footwear at liquidation pricing. 100% verified authentic deadstock sneakers, running shoes, and street classics.',
+    url: '/',
+  });
+
   const [data, setData] = useState<Storefront | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

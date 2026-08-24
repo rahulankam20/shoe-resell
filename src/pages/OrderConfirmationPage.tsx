@@ -4,9 +4,16 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { authHeaders, money } from '../lib/format';
 import { LoadingState } from '../components/StatePanel';
 import { useCart } from '../contexts/CartContext';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 import type { Order } from '../types';
 
 export default function OrderConfirmationPage() {
+  useSEOMeta({
+    title: 'Order Confirmed | SOLEVAULT',
+    description: 'Your authentic sneaker pair is confirmed and reserved for dispatch.',
+    url: '/order-confirmation',
+  });
+
   const { id } = useParams();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);

@@ -4,8 +4,15 @@ import { useCart } from '../contexts/CartContext';
 import { money } from '../lib/format';
 import { getProductImage, handleImageError } from '../lib/images';
 import { EmptyState } from '../components/StatePanel';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 
 export default function CartPage() {
+  useSEOMeta({
+    title: 'Shopping Bag | SOLEVAULT',
+    description: 'Review your selected authentic sneaker pairs and proceed to secure checkout.',
+    url: '/cart',
+  });
+
   const { items, mrpTotal, subtotal, discount, shipping, total, updateItem, removeItem } = useCart();
 
   if (!items.length)

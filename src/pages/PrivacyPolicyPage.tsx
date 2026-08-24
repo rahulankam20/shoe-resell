@@ -1,7 +1,13 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSEOMeta } from '../hooks/useSEOMeta';
 
 export default function PrivacyPolicyPage() {
+  useSEOMeta({
+    title: 'Privacy Policy | SOLEVAULT',
+    description: 'Learn how SOLEVAULT collects, uses, and protects your personal information and transaction details under applicable data protection laws.',
+    url: '/privacy-policy',
+  });
   return (
     <div className="page-shell legal-page">
       <Link className="back-link" to="/"><ArrowLeft size={16} /> Back to SOLEVAULT</Link>
