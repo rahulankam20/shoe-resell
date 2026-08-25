@@ -1,8 +1,53 @@
 @import "tailwindcss";
 
-:root { font-family: Inter, "Helvetica Neue", Arial, sans-serif; color: #111; background: #f6f5f2; font-synthesis: none; --ink: #0b0b0b; --paper: #f6f5f2; --muted: #727272; --line: #d9d8d4; --accent: #ff4d23; }
-html { scroll-behavior: smooth; }
-body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--paper); overflow-x: hidden; }
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+  color: #111;
+  background-color: #f6f5f2;
+  font-synthesis: none;
+  --ink: #0b0b0b;
+  --paper: #f6f5f2;
+  --muted: #727272;
+  --line: #d9d8d4;
+  --accent: #ff4d23;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--paper);
+  color: #111;
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+  overscroll-behavior-x: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  max-width: 100vw;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: var(--paper);
+  overflow-x: hidden;
+  position: relative;
+  overscroll-behavior-x: none;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+  background-color: var(--paper);
+  position: relative;
+}
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; text-decoration: none; }
@@ -408,7 +453,7 @@ td select { padding: .4rem; border: 1px solid var(--line); background: white; }
   .hero-copy { left: 1.25rem; right: 1.25rem; top: auto; bottom: 7vh; transform: none; } .hero-copy h1, .hero-copy h1.compact { font-size: clamp(3.3rem, 15vw, 5.5rem); } .hero-sub { font-size: .8rem; margin: 1rem 0; } .scroll-cue { display: none; }
   .manifesto { grid-template-columns: 1fr; min-height: auto; gap: 3rem; } .manifesto div > p { margin-left: 0; }
   .section-head { align-items: flex-start; flex-direction: column; } .brand-grid { grid-template-columns: 1fr 1fr; } .brand-card { height: 55vw; min-height: 280px; }
-  .category-strip { margin-right: -1.25rem; } .category-card { min-height: 390px; }
+  .category-strip { margin-right: 0; width: 100%; -webkit-overflow-scrolling: touch; padding-bottom: 0.5rem; } .category-card { min-height: 390px; }
   .deal-banner { grid-template-columns: 1fr; } .deal-image { min-height: 55vh; } .deal-copy { min-height: 60vh; }
   .trust-grid { grid-template-columns: 1fr 1fr; } .product-grid { grid-template-columns: repeat(2, 1fr); } .quick-add { transform: translateY(0); } .size-preview { opacity: 1; }
   .footer-top, .footer-bottom { flex-direction: column; } .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }

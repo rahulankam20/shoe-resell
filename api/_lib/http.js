@@ -56,14 +56,34 @@ export function clientIp(req) {
 }
 
 export function appBaseUrl(req) {
+  const originHeader = req?.headers?.origin || req?.headers?.referer;
+  if (originHeader) {
+    try {
+      const url = new URL(originHeader);
+      if (url.origin && !url.origin.includes('localhost') && !url.origin.includes('127.0.0.1')) {
+        return url.origin;
+      }
+    } catch { /* ignore invalid URL */ }
+  }
   const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host;
   if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
     const proto = req.headers?.['x-forwarded-proto'] || 'https';
     return `${proto}://${host}`;
   }
   const envUrl = process.env.APP_BASE_URL || process.env.CASHFREE_APP_URL;
-  if (envUrl) return envUrl.replace(/\/$/, '');
-  return 'http://localhost:5173';
+  if (envUrl && !envUrl.includes('localhost')) return envUrl.replace(/\/$/, '');
+
+  if (originHeader) {
+    try {
+      const url = new URL(originHeader);
+      if (url.origin) return url.origin;
+    } catch { /* ignore */ }
+  }
+  if (host) {
+    const proto = req.headers?.['x-forwarded-proto'] || 'http';
+    return `${proto}://${host}`;
+  }
+  return envUrl ? envUrl.replace(/\/$/, '') : 'http://localhost:5173';
 }
 
 function bufferRequest(req) {
