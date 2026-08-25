@@ -40,10 +40,17 @@ export default function Layout() {
     setLiveResults([]);
 
     if (location.hash === '#brands') {
-      setTimeout(() => {
+      let attempts = 0;
+      const tryScroll = () => {
         const el = document.getElementById('brands');
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }, 150);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        } else if (attempts < 20) {
+          attempts++;
+          setTimeout(tryScroll, 100);
+        }
+      };
+      setTimeout(tryScroll, 100);
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }

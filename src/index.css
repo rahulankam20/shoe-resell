@@ -1485,3 +1485,126 @@ td select { padding: .4rem; border: 1px solid var(--line); background: white; }
   .product-media img, .brand-card img, .quick-add, .button, .aero-card, .aero-shoe-img, .aero-modal-shoe { transition: none; animation: none; }
   .scroll-sequence { height: 100vh !important; }
 }
+
+
+/* ==========================================================================
+   Receipt Printer Animation — scoped to .rp-* prefix (no global CSS conflict)
+   Adapted from "Classic & Smooth Thermal Receipt Printer Animation"
+   Stripped: customizer drawer, mode selector, print/tear buttons, dollar amounts,
+   agency branding. Retained: 3D machine, paper animation, serrated edge.
+   ========================================================================== */
+.rp-stage { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; width: 100%; max-width: 540px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+
+/* 3D Metallic Gold Machine Unit */
+.rp-machine-unit { width: 340px; min-height: 440px; position: relative; display: flex; flex-direction: column; align-items: center; z-index: 30; }
+
+/* Top metallic hood */
+.rp-hood-top { width: 340px; height: 42px; border-radius: 14px 14px 3px 3px; background: linear-gradient(180deg, #ffffff 0%, #fbf4e8 15%, #e9cf9f 45%, #d19e54 75%, #b37f35 100%); box-shadow: 0 -2px 6px rgba(255,255,255,.9), 0 10px 20px rgba(179,127,53,.28), inset 0 2px 2px rgba(255,255,255,.9), inset 0 -2px 4px rgba(105,68,16,.45); position: relative; overflow: hidden; z-index: 25; }
+.rp-hood-highlight { position: absolute; top: 3px; left: 5%; width: 90%; height: 5px; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.95) 50%, rgba(255,255,255,0) 100%); border-radius: 999px; filter: blur(1px); }
+
+/* Dark paper slit */
+.rp-slot-slit { width: 298px; height: 11px; margin-top: -5px; background: #0f0a03; border-radius: 2px; box-shadow: inset 0 6px 12px rgba(25,12,2,.95), inset 0 -1px 2px rgba(255,255,255,.2); position: relative; z-index: 5; }
+
+/* Cutter blade flash */
+.rp-cutter-flash { position: absolute; top: 38px; left: 50%; transform: translateX(-50%); width: 298px; height: 3px; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, #ffffff 50%, rgba(255,255,255,0) 100%); box-shadow: 0 0 10px #ffffff; z-index: 35; opacity: 0; pointer-events: none; }
+.rp-cutter-flash.rp-cutter-active { animation: rpCutterFlash 0.35s ease-out forwards; }
+@keyframes rpCutterFlash { 0% { opacity: 0; transform: translateX(-50%) scaleX(0.1); } 50% { opacity: 1; transform: translateX(-50%) scaleX(1); } 100% { opacity: 0; transform: translateX(-50%) scaleX(1); } }
+
+/* Bottom lip */
+.rp-hood-bottom { width: 340px; height: 12px; margin-top: -3px; border-radius: 0 0 12px 12px; background: linear-gradient(180deg, #9e6d2b 0%, #d8b478 40%, #fff7ea 100%); box-shadow: 0 8px 18px rgba(0,0,0,.05); position: relative; z-index: 10; }
+.rp-hood-shadow { width: 100%; height: 100%; background: linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,0) 100%); }
+
+/* Paper viewport — clips at slit top, allows shadow to escape on sides/bottom */
+.rp-paper-viewport { position: absolute; top: 37px; left: 50%; transform: translateX(-50%); width: 320px; clip-path: inset(0px -60px -1200px -60px); z-index: 8; padding-bottom: 20px; pointer-events: none; perspective: 1200px; perspective-origin: 50% 0%; filter: drop-shadow(0 18px 36px rgba(20,15,5,.16)) drop-shadow(0 4px 12px rgba(20,15,5,.08)); }
+
+/* Receipt paper — serrated bottom edge clip-path (authentic thermal cutter teeth) */
+.rp-paper { width: 280px; margin: 0 auto; background-color: #fafaf8; position: relative; transform-origin: top center; transform-style: preserve-3d; will-change: transform, opacity; user-select: none; pointer-events: auto; clip-path: polygon( 0% 0%, 100% 0%, 100% calc(100% - 10px), 98.33% 100%, 96.67% calc(100% - 10px), 95.00% 100%, 93.33% calc(100% - 10px), 91.67% 100%, 90.00% calc(100% - 10px), 88.33% 100%, 86.67% calc(100% - 10px), 85.00% 100%, 83.33% calc(100% - 10px), 81.67% 100%, 80.00% calc(100% - 10px), 78.33% 100%, 76.67% calc(100% - 10px), 75.00% 100%, 73.33% calc(100% - 10px), 71.67% 100%, 70.00% calc(100% - 10px), 68.33% 100%, 66.67% calc(100% - 10px), 65.00% 100%, 63.33% calc(100% - 10px), 61.67% 100%, 60.00% calc(100% - 10px), 58.33% 100%, 56.67% calc(100% - 10px), 55.00% 100%, 53.33% calc(100% - 10px), 51.67% 100%, 50.00% calc(100% - 10px), 48.33% 100%, 46.67% calc(100% - 10px), 45.00% 100%, 43.33% calc(100% - 10px), 41.67% 100%, 40.00% calc(100% - 10px), 38.33% 100%, 36.67% calc(100% - 10px), 35.00% 100%, 33.33% calc(100% - 10px), 31.67% 100%, 30.00% calc(100% - 10px), 28.33% 100%, 26.67% calc(100% - 10px), 25.00% 100%, 23.33% calc(100% - 10px), 21.67% 100%, 20.00% calc(100% - 10px), 18.33% 100%, 16.67% calc(100% - 10px), 15.00% 100%, 13.33% calc(100% - 10px), 11.67% 100%, 10.00% calc(100% - 10px), 8.33% 100%, 6.67% calc(100% - 10px), 5.00% 100%, 3.33% calc(100% - 10px), 1.67% 100%, 0% calc(100% - 10px) ); }
+
+/* Thermal paper grain texture overlay */
+.rp-paper::before { content: ''; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); opacity: 0.025; pointer-events: none; z-index: 1; }
+
+/* 3D paper light reflection sheen */
+.rp-paper::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,.45) 0%, rgba(255,255,255,.15) 35%, rgba(0,0,0,.02) 75%, rgba(0,0,0,.05) 100%); pointer-events: none; z-index: 3; }
+
+/* Paper states */
+.rp-paper.rp-retracted { transform: translateY(-93%) rotateX(-16deg) translateZ(-25px); }
+.rp-paper.rp-printed { transform: translateY(0%) rotateX(0deg) translateZ(0px); opacity: 1; }
+
+/* Smooth 3D print animation — 2.5s exactly matching audio duration */
+.rp-paper.rp-printing-smooth { animation: rpPrintSmooth3D 2.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes rpPrintSmooth3D {
+  0% { transform: translateY(-93%) rotateX(-18deg) translateZ(-30px) scale(0.97); opacity: 0.4; }
+  20% { transform: translateY(-70%) rotateX(-12deg) translateZ(20px) scale(0.985); opacity: 0.85; }
+  45% { transform: translateY(-40%) rotateX(-6deg) translateZ(26px) scale(0.995); opacity: 1; }
+  75% { transform: translateY(-12%) rotateX(-2deg) translateZ(10px) scale(1); }
+  90% { transform: translateY(1%) rotateX(0.8deg) translateZ(2px) scale(1); }
+  100% { transform: translateY(0%) rotateX(0deg) translateZ(0px) scale(1); opacity: 1; }
+}
+
+/* Receipt content — thermal mono typography */
+.rp-content { padding: 1.25rem 1.1rem 1.75rem; font-family: 'Courier New', Courier, monospace; color: #222; letter-spacing: 0; position: relative; z-index: 2; }
+.rp-receipt-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1rem; }
+.rp-brand-info { display: flex; flex-direction: column; gap: .2rem; width: 68%; }
+.rp-brand-name { font-size: .8rem; font-weight: 800; letter-spacing: .06em; color: #0b0b0b; }
+.rp-payment-title { font-size: .6rem; font-weight: 600; letter-spacing: .05em; color: #555; line-height: 1.3; }
+.rp-logo-badge { width: 36px; height: 36px; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.rp-amount-section { margin-bottom: 1rem; }
+.rp-amount { font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; color: #111; line-height: 1.1; margin-bottom: .25rem; font-variant-numeric: tabular-nums; }
+.rp-meta { font-size: .58rem; font-weight: 500; color: #888; letter-spacing: .04em; text-transform: uppercase; }
+.rp-divider { width: 100%; border: 0; border-bottom: 1px dashed #ccc; margin: .8rem 0; }
+.rp-items-list { display: flex; flex-direction: column; gap: .55rem; }
+.rp-item-row { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; font-size: .72rem; font-weight: 500; }
+.rp-item-name { color: #333; flex: 1; min-width: 0; word-break: break-word; line-height: 1.4; }
+.rp-item-price { font-weight: 600; color: #222; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rp-totals-section { display: flex; flex-direction: column; gap: .35rem; font-size: .72rem; }
+.rp-total-row { display: flex; justify-content: space-between; color: #777; font-weight: 500; }
+.rp-grand-total { display: flex; justify-content: space-between; align-items: center; margin-top: .55rem; padding-top: .5rem; border-top: 1px solid #ccc; font-weight: 700; font-size: .78rem; color: #111; font-variant-numeric: tabular-nums; }
+.rp-receipt-footer { text-align: center; margin-top: .75rem; padding-top: .4rem; }
+.rp-footer-msg { font-size: .62rem; font-weight: 600; letter-spacing: .1em; color: #555; margin-bottom: .6rem; }
+.rp-barcode-graphic { display: flex; flex-direction: column; align-items: center; gap: .12rem; opacity: .75; }
+.rp-barcode-lines { width: 72%; height: 24px; background: repeating-linear-gradient(90deg, #222 0px, #222 1.5px, transparent 1.5px, transparent 3px, #222 3px, #222 4px, transparent 4px, transparent 5.5px, #222 5.5px, #222 8px, transparent 8px, transparent 9.5px); }
+.rp-barcode-num { font-size: .48rem; font-weight: 400; letter-spacing: .12em; color: #888; }
+.rp-serrated-edge { width: 100%; height: 12px; }
+
+/* On-demand Modal Overlay for Thermal Receipt Printer */
+.rp-modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(10, 10, 10, 0.88); backdrop-filter: blur(14px); display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; overflow-y: auto; animation: rpModalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes rpModalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.rp-modal-content { position: relative; display: flex; flex-direction: column; align-items: center; max-width: 480px; width: 100%; margin: auto; padding-top: 1.5rem; }
+.rp-close-btn { position: absolute; top: -14px; right: 0; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; transition: background 0.18s, transform 0.18s; z-index: 50; }
+.rp-close-btn:hover { background: rgba(255, 255, 255, 0.25); transform: scale(1.08); }
+.rp-actions-bar { margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: center; z-index: 40; }
+
+/* Print Action Button (Exact zip styling) */
+.print-action-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.65rem; padding: 0.78rem 1.6rem; border-radius: 12px; border: 1px solid #d9ccb8; background: linear-gradient(180deg, #ffffff 0%, #f4eee4 100%); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.02); font-family: inherit; font-size: 0.88rem; font-weight: 700; color: #382c20; cursor: pointer; transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease; }
+.print-action-btn:hover:not(:disabled) { background: linear-gradient(180deg, #ffffff 0%, #eae0d0 100%); border-color: #c4b094; transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.03); }
+.print-action-btn:active:not(:disabled) { transform: translateY(0); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05); }
+.print-action-btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+
+/* Secondary Action Button — Tear receipt & export (Exact zip styling) */
+.secondary-action-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.78rem 1.35rem; border-radius: 12px; border: 1px dashed #cfbeaa; background: rgba(250, 245, 235, 0.85); font-family: inherit; font-size: 0.84rem; font-weight: 700; color: #635443; cursor: pointer; transition: all 0.22s ease; }
+.secondary-action-btn:hover:not(:disabled) { background: #ecc588; color: #2b2118; border-color: transparent; transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08); }
+.secondary-action-btn:active:not(:disabled) { transform: translateY(0); }
+.secondary-action-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+/* Authentic 3D Paper Tear-Away Animation */
+.rp-paper.rp-tearing { animation: paperTearAway 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; pointer-events: none; transform-origin: top right; }
+@keyframes paperTearAway {
+  0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 1; }
+  20% { transform: translateY(6px) translateX(18px) rotate(-3deg); opacity: 1; }
+  50% { transform: translateY(14px) translateX(55px) rotate(-8deg) scale(0.98); opacity: 0.8; }
+  100% { transform: translateY(22px) translateX(110px) rotate(-14deg) scale(0.94); opacity: 0; }
+}
+
+/* Clean Print / Save as PDF rules */
+@media print {
+  body * { visibility: hidden; }
+  .rp-modal-overlay, .rp-modal-content, #rp-printable-receipt, #rp-printable-receipt * { visibility: visible; }
+  .rp-modal-overlay { position: absolute; inset: 0; background: transparent !important; padding: 0 !important; backdrop-filter: none !important; display: block !important; }
+  .rp-modal-content { padding: 0 !important; max-width: 100% !important; }
+  .rp-machine-unit, .rp-close-btn, .rp-actions-bar { display: none !important; }
+  .rp-paper-viewport { position: static !important; clip-path: none !important; filter: none !important; transform: none !important; width: 100% !important; }
+  .rp-paper { position: static !important; transform: none !important; clip-path: none !important; box-shadow: none !important; width: 320px !important; margin: 20px auto !important; background: #fff !important; }
+  .rp-content { color: #000 !important; padding: 1.5rem !important; }
+}
+
+
