@@ -5,6 +5,7 @@ import { authHeaders, money } from '../lib/format';
 import { LoadingState } from '../components/StatePanel';
 import { useCart } from '../contexts/CartContext';
 import { useSEOMeta } from '../hooks/useSEOMeta';
+import ReceiptPrinterAnimation from '../components/ReceiptPrinterAnimation';
 import type { Order } from '../types';
 
 export default function OrderConfirmationPage() {
@@ -25,6 +26,7 @@ export default function OrderConfirmationPage() {
   const [loading, setLoading] = useState(!seeded);
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
+  const [showPrinter, setShowPrinter] = useState(false);
 
   const load = useCallback(async () => {
     if (!targetId) return;
@@ -76,23 +78,82 @@ export default function OrderConfirmationPage() {
   const failed = ['FAILED', 'CANCELLED', 'EXPIRED'].includes(String(order?.payment_status));
   const pending = !paid && !failed;
 
-  return <div className="confirmation-page page-shell">
-    <div className={`confirmation-mark ${failed ? 'failed' : pending ? 'pending' : ''}`}>{paid ? <Check /> : failed ? <XCircle /> : <Clock3 />}</div>
-    <p className="eyebrow accent">{paid ? 'PAYMENT CONFIRMED' : failed ? 'PAYMENT NOT COMPLETE' : 'WAITING FOR UPI'}</p>
-    <h1>{paid ? <>THE PAIR<br />IS YOURS.</> : failed ? <>PAYMENT<br />DID NOT LAND.</> : <>HOLD TIGHT.<br />CONFIRMING.</>}</h1>
-    <p>{paid ? 'Cashfree confirmed this UPI payment on the server. Stock has been captured.' : failed ? (order?.failure_reason || 'The UPI attempt was cancelled, failed or expired. Nothing was charged.') : 'Redirect is only UX. We mark the order paid only after a signed webhook or official Cashfree reconciliation.'}</p>
-    {error && <p className="form-error" role="alert">{error}</p>}
-    <div className="confirmation-card">
-      <PackageCheck />
-      <div><span>Order reference</span><strong>{order?.order_number || `Order #${targetId}`}</strong></div>
-      {order && <div><span>Order total</span><strong>{money(order.total)}</strong></div>}
-      <div><span>Payment</span><strong>{order?.payment_status || 'UNKNOWN'}</strong></div>
+  return (
+    <div className="confirmation-page page-shell">
+      <div className={`confirmation-mark ${failed ? 'failed' : pending ? 'pending' : ''}`}>
+        {paid ? <Check /> : failed ? <XCircle /> : <Clock3 />}
+      </div>
+      <p className="eyebrow accent">
+        {paid ? 'PAYMENT CONFIRMED' : failed ? 'PAYMENT NOT COMPLETE' : 'WAITING FOR UPI'}
+      </p>
+
+      {/* Print receipt button positioned directly below PAYMENT CONFIRMED text */}
+      {paid && (
+        <div style={{ margin: '0.85rem 0 1.5rem', display: 'flex', justifyContent: 'center' }}>
+          <button
+            type="button"
+            className="print-action-btn"
+            onClick={() => setShowPrinter(true)}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect x="6" y="14" width="12" height="8" />
+            </svg>
+            <span>Print receipt</span>
+          </button>
+        </div>
+      )}
+
+      <h1>
+        {paid ? <>THE PAIR<br />IS YOURS.</> : failed ? <>PAYMENT<br />DID NOT LAND.</> : <>HOLD TIGHT.<br />CONFIRMING.</>}
+      </h1>
+      <p>
+        {paid
+          ? 'Cashfree confirmed this UPI payment on the server. Stock has been captured.'
+          : failed
+          ? (order?.failure_reason || 'The UPI attempt was cancelled, failed or expired. Nothing was charged.')
+          : 'Redirect is only UX. We mark the order paid only after a signed webhook or official Cashfree reconciliation.'}
+      </p>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <div className="confirmation-card">
+        <PackageCheck />
+        <div><span>Order reference</span><strong>{order?.order_number || `Order #${targetId}`}</strong></div>
+        {order && <div><span>Order total</span><strong>{money(order.total)}</strong></div>}
+        <div><span>Payment</span><strong>{order?.payment_status || 'UNKNOWN'}</strong></div>
+      </div>
+      {order?.cf_order_id && <p className="secure-note">Cashfree order {order.cf_order_id}</p>}
+      <div className="confirmation-actions">
+        {pending && (
+          <button className="button dark" onClick={reconcile} disabled={checking}>
+            <RefreshCcw /> {checking ? 'Checking Cashfree…' : 'Check payment status'}
+          </button>
+        )}
+        <Link className="button dark" to="/account?tab=orders">
+          Track your order <ArrowRight />
+        </Link>
+        <Link className="button outline" to="/shop">
+          Keep exploring
+        </Link>
+      </div>
+
+      {/* On-Demand Thermal Receipt Printer Modal */}
+      {showPrinter && order && (
+        <ReceiptPrinterAnimation
+          order={order}
+          onClose={() => setShowPrinter(false)}
+        />
+      )}
     </div>
-    {order?.cf_order_id && <p className="secure-note">Cashfree order {order.cf_order_id}</p>}
-    <div className="confirmation-actions">
-      {pending && <button className="button dark" onClick={reconcile} disabled={checking}><RefreshCcw /> {checking ? 'Checking Cashfree…' : 'Check payment status'}</button>}
-      <Link className="button dark" to="/account?tab=orders">Track your order <ArrowRight /></Link>
-      <Link className="button outline" to="/shop">Keep exploring</Link>
-    </div>
-  </div>;
+  );
 }
