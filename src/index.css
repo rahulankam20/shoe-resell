@@ -16,38 +16,21 @@
 
 html {
   scroll-behavior: smooth;
-  background-color: var(--paper);
-  color: #111;
-  overflow-x: hidden;
-  max-width: 100vw;
-  width: 100%;
-  overscroll-behavior-x: none;
-  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  padding: 0;
   min-width: 320px;
-  max-width: 100vw;
-  width: 100%;
   min-height: 100vh;
-  min-height: 100dvh;
-  background-color: var(--paper);
+  background: var(--paper);
   overflow-x: hidden;
-  position: relative;
-  overscroll-behavior-x: none;
 }
 
 #root {
   min-height: 100vh;
-  min-height: 100dvh;
-  overflow-x: hidden;
-  max-width: 100vw;
   width: 100%;
-  background-color: var(--paper);
-  position: relative;
 }
+
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; text-decoration: none; }
@@ -74,8 +57,9 @@ img { max-width: 100%; }
 .cart-link { position: relative; }
 .cart-link span { position: absolute; right: -8px; top: -7px; background: var(--accent); color: white; border-radius: 50%; font-size: 9px; width: 17px; height: 17px; display: grid; place-items: center; }
 .mobile-menu-button { display: none; }
-.scroll-sequence { height: 420vh; background: #080808; position: relative; }
-.sequence-sticky { position: sticky; top: 0; height: 100vh; overflow: hidden; background: #080808; }
+.scroll-sequence { height: 500vh; background: #080808; position: relative; }
+.sequence-sticky { position: sticky; top: 0; height: 100vh; overflow: hidden; background: #080808; will-change: transform; }
+.sequence-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; transform: translateZ(0); backface-visibility: hidden; will-change: contents; }
 .sequence-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; user-select: none; }
 .sequence-vignette { display: none; }
 .sequence-progress { position: absolute; left: 3vw; right: 3vw; bottom: 18px; height: 1px; background: rgba(255,255,255,.3); }

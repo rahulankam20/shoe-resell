@@ -22,20 +22,21 @@ const getFrameUrl = (basePath: string, prefix: string, index: number, pad: numbe
 };
 
 export default function ScrollSequence({
-  frameCount = 240,
+  frameCount = 192,
   basePath = '/frames',
-  prefix = 'ezgif-frame-',
+  prefix = 'frame_',
   pad = 3,
-  format = 'jpg',
+  format = 'webp',
   fallbackImage = '/images/solevault-hero.webp',
-  alt = 'SOLEVAULT Sneaker 360 interactive rotation',
+  alt = 'SOLEVAULT Futuristic Sneaker 360 interactive rotation',
   children,
   onProgress,
 }: ScrollSequenceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const progressBarRef = useRef<HTMLSpanElement>(null);
   const imagesRef = useRef<HTMLImageElement[]>([]);
-  const lastDrawnIndexRef = useRef<number>(-1);
+  const lastDrawnImageRef = useRef<HTMLImageElement | null>(null);
   const currentFrameObjRef = useRef<{ frame: number }>({ frame: 0 });
   const rafIdRef = useRef<number | null>(null);
 
@@ -53,20 +54,39 @@ export default function ScrollSequence({
     return () => mediaQuery.removeEventListener('change', handler);
   }, []);
 
-  // Draw frame to canvas with cover scaling
+  // Draw frame to canvas with high-DPI and cover scaling
   const drawFrame = useCallback((frameIndex: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const img = imagesRef.current[frameIndex] || imagesRef.current[0];
-    if (!img || !img.complete || img.naturalWidth === 0) return;
+    // Ensure frameIndex is within bounds
+    const safeIndex = Math.min(frameCount - 1, Math.max(0, Math.floor(frameIndex)));
 
-    // Skip redundant redraws
-    if (lastDrawnIndexRef.current === frameIndex && canvas.width > 0) {
-      return;
+    // Find best available image: exact frame or nearest loaded keyframe
+    const images = imagesRef.current;
+    let bestImg = (images[safeIndex] && images[safeIndex].complete && images[safeIndex].naturalWidth > 0)
+      ? images[safeIndex]
+      : null;
+
+    if (!bestImg) {
+      for (let offset = 1; offset < frameCount; offset++) {
+        const prev = images[safeIndex - offset];
+        if (prev && prev.complete && prev.naturalWidth > 0) {
+          bestImg = prev;
+          break;
+        }
+        const next = images[safeIndex + offset];
+        if (next && next.complete && next.naturalWidth > 0) {
+          bestImg = next;
+          break;
+        }
+      }
     }
 
-    const ctx = canvas.getContext('2d');
+    if (!bestImg) bestImg = images[0];
+    if (!bestImg || !bestImg.complete || bestImg.naturalWidth === 0) return;
+
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -76,22 +96,28 @@ export default function ScrollSequence({
 
     if (width === 0 || height === 0) return;
 
-    // Cap DPR at 2 for performance (3x+ screens get diminishing returns)
+    // Cap DPR at 2 for silky smooth 60/120fps performance
     const effectiveDpr = Math.min(dpr, 2);
     const displayWidth = Math.round(width * effectiveDpr);
     const displayHeight = Math.round(height * effectiveDpr);
 
-    if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+    const sizeChanged = canvas.width !== displayWidth || canvas.height !== displayHeight;
+    if (sizeChanged) {
       canvas.width = displayWidth;
       canvas.height = displayHeight;
+    }
+
+    // Skip redundant redraw only if the exact same image is already drawn at the same canvas dimensions
+    if (!sizeChanged && lastDrawnImageRef.current === bestImg) {
+      return;
     }
 
     ctx.save();
     ctx.scale(effectiveDpr, effectiveDpr);
 
     // Compute cover scaling
-    const imgWidth = img.naturalWidth;
-    const imgHeight = img.naturalHeight;
+    const imgWidth = bestImg.naturalWidth;
+    const imgHeight = bestImg.naturalHeight;
     const imgRatio = imgWidth / imgHeight;
     const canvasRatio = width / height;
 
@@ -109,19 +135,18 @@ export default function ScrollSequence({
       drawY = 0;
     }
 
-    // Clear and draw
+    // Clear and draw frame
     ctx.clearRect(0, 0, width, height);
-    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+    ctx.drawImage(bestImg, drawX, drawY, drawW, drawH);
     ctx.restore();
 
-    lastDrawnIndexRef.current = frameIndex;
-  }, []);
+    lastDrawnImageRef.current = bestImg;
+  }, [frameCount]);
 
-  // Priority-aware preload: load first frame, last frame, then every 12th (keyframes),
-  // then fill in the rest. Decode each frame before marking it ready.
+  // Priority-aware staged preloader
   useEffect(() => {
     let isMounted = true;
-    const images: HTMLImageElement[] = [];
+    const images: HTMLImageElement[] = new Array(frameCount);
     imagesRef.current = images;
 
     let loaded = 0;
@@ -137,12 +162,19 @@ export default function ScrollSequence({
         drawFrame(0);
       }
 
+      // If this loaded frame is the current target frame, update canvas
+      const currentTarget = Math.min(frameCount - 1, Math.max(0, Math.round(currentFrameObjRef.current.frame)));
+      if (index === currentTarget) {
+        drawFrame(index);
+      }
+
       if (loaded === frameCount) {
         setIsReady(true);
       }
     };
 
     const loadFrame = (i: number) => {
+      if (images[i]) return;
       const img = new Image();
       img.decoding = 'async';
       img.src = getFrameUrl(basePath, prefix, i, pad, format);
@@ -163,19 +195,20 @@ export default function ScrollSequence({
       };
     };
 
-    // Phase 1: First frame (critical for first paint)
+    // Phase 1: First frame (critical for immediate first paint)
     loadFrame(0);
 
-    // Phase 2: Keyframes at every ~12th frame + last frame (gives smooth scrubbing feel)
-    const keyframeInterval = 12;
+    // Phase 2: Keyframes at every ~8th frame + last frame (immediate interactive scrub)
+    const keyframeInterval = 8;
     const keyframes: number[] = [];
     for (let i = keyframeInterval; i < frameCount - 1; i += keyframeInterval) {
       keyframes.push(i);
     }
     if (frameCount > 1) keyframes.push(frameCount - 1);
 
-    // Use requestIdleCallback or setTimeout to avoid blocking main thread
-    const schedule = typeof requestIdleCallback !== 'undefined' ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 1);
+    const schedule = typeof requestIdleCallback !== 'undefined'
+      ? requestIdleCallback
+      : (cb: () => void) => setTimeout(cb, 1);
 
     schedule(() => {
       if (!isMounted) return;
@@ -185,7 +218,7 @@ export default function ScrollSequence({
       schedule(() => {
         if (!isMounted) return;
         for (let i = 1; i < frameCount; i++) {
-          if (images[i]) continue; // already loaded (keyframe)
+          if (images[i]) continue;
           loadFrame(i);
         }
       });
@@ -194,21 +227,23 @@ export default function ScrollSequence({
     return () => {
       isMounted = false;
     };
-  }, [frameCount, basePath, prefix, pad, format, drawFrame]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frameCount, basePath, prefix, pad, format]);
 
   // Window resize handler
   useEffect(() => {
     const onResize = () => {
-      lastDrawnIndexRef.current = -1; // force redraw
-      drawFrame(currentFrameObjRef.current.frame);
+      lastDrawnImageRef.current = null; // force redraw at new size
+      drawFrame(Math.round(currentFrameObjRef.current.frame));
       ScrollTrigger.refresh();
     };
 
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [drawFrame]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Set up GSAP ScrollTrigger
+  // Set up GSAP ScrollTrigger synchronously in context
   useEffect(() => {
     if (!containerRef.current || reducedMotion) return;
 
@@ -223,11 +258,17 @@ export default function ScrollSequence({
           trigger: container,
           start: 'top top',
           end: 'bottom bottom',
-          scrub: 0.6,
+          scrub: 0.5,
+          invalidateOnRefresh: true,
           onUpdate: (self) => {
             const targetFrame = Math.min(frameCount - 1, Math.max(0, Math.round(frameObj.frame)));
-            if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
 
+            // Direct progress line transform for immediate 120fps feedback
+            if (progressBarRef.current) {
+              progressBarRef.current.style.transform = `scaleX(${self.progress})`;
+            }
+
+            if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
             rafIdRef.current = requestAnimationFrame(() => {
               drawFrame(targetFrame);
               onProgress?.(self.progress);
@@ -237,16 +278,32 @@ export default function ScrollSequence({
       });
     }, containerRef);
 
+    // Initial measurement refresh after setup
+    requestAnimationFrame(() => {
+      ScrollTrigger.refresh();
+    });
+
     return () => {
       ctx.revert();
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
-  }, [frameCount, drawFrame, onProgress, reducedMotion, isReady]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frameCount, onProgress, reducedMotion]);
 
-  // Initial paint
+  // Initial paint and refresh ScrollTrigger when ready
   useEffect(() => {
-    drawFrame(0);
-  }, [isReady, drawFrame]);
+    if (loadedCount > 0) {
+      drawFrame(0);
+      
+      // Refresh ScrollTrigger after images are loaded
+      if (loadedCount >= 8) { // Refresh after first keyframes are loaded
+        requestAnimationFrame(() => {
+          ScrollTrigger.refresh();
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedCount]);
 
   const loadPercent = Math.min(100, Math.round((loadedCount / frameCount) * 100));
 
@@ -255,14 +312,30 @@ export default function ScrollSequence({
       ref={containerRef}
       className="scroll-sequence"
       aria-label={alt}
-      style={{ position: 'relative', height: reducedMotion ? '100vh' : '400vh', background: '#080808' }}
+      style={{ position: 'relative', height: reducedMotion ? '100vh' : '500vh', background: '#080808' }}
     >
-      <div className="sequence-sticky" style={{ position: 'sticky', top: 0, height: '100vh', width: '100%', overflow: 'hidden', background: '#080808' }}>
+      <div
+        className="sequence-sticky"
+        style={{
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          width: '100%',
+          overflow: 'hidden',
+          background: '#080808',
+        }}
+      >
         {loadError ? (
           <img
             src={fallbackImage}
             alt={alt}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
           />
         ) : (
           <canvas
@@ -275,6 +348,7 @@ export default function ScrollSequence({
               height: '100%',
               display: 'block',
               pointerEvents: 'none',
+              zIndex: 2,
             }}
           />
         )}
@@ -284,7 +358,7 @@ export default function ScrollSequence({
           <div
             style={{
               position: 'absolute',
-              top: '2rem',
+              top: '5.5rem',
               right: '2.5vw',
               zIndex: 30,
               display: 'flex',
@@ -294,11 +368,11 @@ export default function ScrollSequence({
               fontSize: '10px',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
-              background: 'rgba(0,0,0,0.7)',
-              padding: '6px 12px',
+              background: 'rgba(0,0,0,0.75)',
+              padding: '6px 14px',
               borderRadius: '20px',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.12)',
             }}
           >
             <div
@@ -311,18 +385,19 @@ export default function ScrollSequence({
                 animation: 'spin 1s linear infinite',
               }}
             />
-            <span>Loading Vault · {loadPercent}%</span>
+            <span>Loading 360° · {loadPercent}%</span>
           </div>
         )}
 
-        {/* Hero content overlay */}
+        {/* Hero story content overlay */}
         {children}
 
         {/* Scroll sequence progress line */}
-        <div className="sequence-progress" aria-hidden="true">
+        <div className="sequence-progress" aria-hidden="true" style={{ zIndex: 12 }}>
           <span
+            ref={progressBarRef}
             style={{
-              transform: `scaleX(${isReady ? (currentFrameObjRef.current.frame + 1) / frameCount : loadPercent / 100})`,
+              transform: 'scaleX(0)',
             }}
           />
         </div>
