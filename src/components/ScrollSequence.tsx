@@ -1,8 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
 
 interface ScrollSequenceProps {
   frameCount?: number;
@@ -28,78 +24,85 @@ export default function ScrollSequence({
   pad = 3,
   format = 'webp',
   fallbackImage = '/images/solevault-hero.webp',
-  alt = 'SOLEVAULT Futuristic Sneaker 360 interactive rotation',
+  alt = 'SOLEVAULT 360° Interactive Sneaker Experience',
   children,
   onProgress,
 }: ScrollSequenceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const progressBarRef = useRef<HTMLSpanElement>(null);
-  const imagesRef = useRef<HTMLImageElement[]>([]);
+  const progressLineRef = useRef<HTMLSpanElement>(null);
+
+  // References to keep RAF loop completely independent of React render cycle
+  const imagesRef = useRef<(HTMLImageElement | null)[]>([]);
+  const currentProgressRef = useRef<number>(0);
+  const targetProgressRef = useRef<number>(0);
   const lastDrawnImageRef = useRef<HTMLImageElement | null>(null);
-  const currentFrameObjRef = useRef<{ frame: number }>({ frame: 0 });
-  const rafIdRef = useRef<number | null>(null);
+  const onProgressRef = useRef(onProgress);
+  useEffect(() => {
+    onProgressRef.current = onProgress;
+  }, [onProgress]);
 
   const [loadedCount, setLoadedCount] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
 
-  // Check prefers-reduced-motion
+  // Drag interaction state
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartProgressRef = useRef(0);
+
+  // Detect prefers-reduced-motion
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReducedMotion(mediaQuery.matches);
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(mq.matches);
     const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
   }, []);
 
-  // Draw frame to canvas with high-DPI and cover scaling
+  // ── High-DPI Cover-Scaling Canvas Renderer ──────────────────────────
   const drawFrame = useCallback((frameIndex: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Ensure frameIndex is within bounds
-    const safeIndex = Math.min(frameCount - 1, Math.max(0, Math.floor(frameIndex)));
-
-    // Find best available image: exact frame or nearest loaded keyframe
     const images = imagesRef.current;
-    let bestImg = (images[safeIndex] && images[safeIndex].complete && images[safeIndex].naturalWidth > 0)
-      ? images[safeIndex]
-      : null;
+    const boundedIndex = Math.min(frameCount - 1, Math.max(0, Math.round(frameIndex)));
 
-    if (!bestImg) {
+    // 1. Pick exact frame or find nearest available keyframe
+    let img = images[boundedIndex];
+    if (!img || !img.complete || img.naturalWidth === 0) {
       for (let offset = 1; offset < frameCount; offset++) {
-        const prev = images[safeIndex - offset];
+        const prev = images[boundedIndex - offset];
         if (prev && prev.complete && prev.naturalWidth > 0) {
-          bestImg = prev;
+          img = prev;
           break;
         }
-        const next = images[safeIndex + offset];
+        const next = images[boundedIndex + offset];
         if (next && next.complete && next.naturalWidth > 0) {
-          bestImg = next;
+          img = next;
           break;
         }
       }
     }
 
-    if (!bestImg) bestImg = images[0];
-    if (!bestImg || !bestImg.complete || bestImg.naturalWidth === 0) return;
+    if (!img || !img.complete || img.naturalWidth === 0) {
+      img = images[0];
+    }
+    if (!img || !img.complete || img.naturalWidth === 0) return;
 
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const rect = canvas.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
 
     if (width === 0 || height === 0) return;
 
-    // Cap DPR at 2 for silky smooth 60/120fps performance
-    const effectiveDpr = Math.min(dpr, 2);
-    const displayWidth = Math.round(width * effectiveDpr);
-    const displayHeight = Math.round(height * effectiveDpr);
+    const displayWidth = Math.round(width * dpr);
+    const displayHeight = Math.round(height * dpr);
 
     const sizeChanged = canvas.width !== displayWidth || canvas.height !== displayHeight;
     if (sizeChanged) {
@@ -107,17 +110,17 @@ export default function ScrollSequence({
       canvas.height = displayHeight;
     }
 
-    // Skip redundant redraw only if the exact same image is already drawn at the same canvas dimensions
-    if (!sizeChanged && lastDrawnImageRef.current === bestImg) {
+    // Skip redundant redraw only if same image at same dimensions
+    if (!sizeChanged && lastDrawnImageRef.current === img) {
       return;
     }
 
     ctx.save();
-    ctx.scale(effectiveDpr, effectiveDpr);
+    ctx.scale(dpr, dpr);
 
-    // Compute cover scaling
-    const imgWidth = bestImg.naturalWidth;
-    const imgHeight = bestImg.naturalHeight;
+    // Compute aspect-ratio cover positioning
+    const imgWidth = img.naturalWidth;
+    const imgHeight = img.naturalHeight;
     const imgRatio = imgWidth / imgHeight;
     const canvasRatio = width / height;
 
@@ -135,18 +138,23 @@ export default function ScrollSequence({
       drawY = 0;
     }
 
-    // Clear and draw frame
-    ctx.clearRect(0, 0, width, height);
-    ctx.drawImage(bestImg, drawX, drawY, drawW, drawH);
+    // High quality image smoothing
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // Clear and draw image
+    ctx.fillStyle = '#080808';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, drawX, drawY, drawW, drawH);
     ctx.restore();
 
-    lastDrawnImageRef.current = bestImg;
+    lastDrawnImageRef.current = img;
   }, [frameCount]);
 
-  // Priority-aware staged preloader
+  // ── Multi-Stage Priority Frame Preloader ─────────────────────────────
   useEffect(() => {
     let isMounted = true;
-    const images: HTMLImageElement[] = new Array(frameCount);
+    const images: (HTMLImageElement | null)[] = new Array(frameCount).fill(null);
     imagesRef.current = images;
 
     let loaded = 0;
@@ -157,15 +165,15 @@ export default function ScrollSequence({
       loaded += 1;
       setLoadedCount(loaded);
 
-      // Once the first frame is ready, render it immediately
-      if (index === 0 && canvasRef.current) {
+      // Render frame 0 immediately on first load
+      if (index === 0) {
         drawFrame(0);
       }
 
-      // If this loaded frame is the current target frame, update canvas
-      const currentTarget = Math.min(frameCount - 1, Math.max(0, Math.round(currentFrameObjRef.current.frame)));
-      if (index === currentTarget) {
-        drawFrame(index);
+      // If this loaded frame is near current progress, refresh canvas
+      const currentTarget = Math.min(frameCount - 1, Math.max(0, Math.round(currentProgressRef.current * (frameCount - 1))));
+      if (Math.abs(index - currentTarget) <= 2) {
+        drawFrame(currentTarget);
       }
 
       if (loaded === frameCount) {
@@ -195,11 +203,11 @@ export default function ScrollSequence({
       };
     };
 
-    // Phase 1: First frame (critical for immediate first paint)
+    // Stage 1: First frame (instant paint)
     loadFrame(0);
 
-    // Phase 2: Keyframes at every ~8th frame + last frame (immediate interactive scrub)
-    const keyframeInterval = 8;
+    // Stage 2: Keyframes every 6th frame (gives instant smooth 360° rotation)
+    const keyframeInterval = 6;
     const keyframes: number[] = [];
     for (let i = keyframeInterval; i < frameCount - 1; i += keyframeInterval) {
       keyframes.push(i);
@@ -214,7 +222,7 @@ export default function ScrollSequence({
       if (!isMounted) return;
       for (const k of keyframes) loadFrame(k);
 
-      // Phase 3: Fill remaining frames after keyframes
+      // Stage 3: Load all remaining frames
       schedule(() => {
         if (!isMounted) return;
         for (let i = 1; i < frameCount; i++) {
@@ -227,83 +235,103 @@ export default function ScrollSequence({
     return () => {
       isMounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frameCount, basePath, prefix, pad, format]);
+  }, [frameCount, basePath, prefix, pad, format, drawFrame]);
 
-  // Window resize handler
+  // ── Bulletproof Scroll Calculation & Animation Loop ─────────────────
   useEffect(() => {
-    const onResize = () => {
-      lastDrawnImageRef.current = null; // force redraw at new size
-      drawFrame(Math.round(currentFrameObjRef.current.frame));
-      ScrollTrigger.refresh();
+    if (reducedMotion) return;
+
+    let animId: number;
+
+    const computeProgressFromScroll = () => {
+      if (isDraggingRef.current) return;
+      const container = containerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const totalScrollable = rect.height - window.innerHeight;
+
+      if (totalScrollable <= 0) {
+        targetProgressRef.current = 0;
+        return;
+      }
+
+      // rect.top goes from 0 (when section hits viewport top) to -totalScrollable (when bottom hits viewport)
+      const rawProgress = -rect.top / totalScrollable;
+      targetProgressRef.current = Math.max(0, Math.min(1, rawProgress));
     };
 
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Continuous 60/120fps RAF loop with smooth lerp interpolation
+    const tick = () => {
+      computeProgressFromScroll();
 
-  // Set up GSAP ScrollTrigger synchronously in context
-  useEffect(() => {
-    if (!containerRef.current || reducedMotion) return;
+      const target = targetProgressRef.current;
+      const current = currentProgressRef.current;
+      const diff = target - current;
 
-    const container = containerRef.current;
-    const frameObj = currentFrameObjRef.current;
+      // Smooth damping (lerp factor 0.22 for responsive snappy feel)
+      if (Math.abs(diff) > 0.0002) {
+        currentProgressRef.current += diff * 0.22;
+      } else {
+        currentProgressRef.current = target;
+      }
 
-    const ctx = gsap.context(() => {
-      gsap.to(frameObj, {
-        frame: frameCount - 1,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: container,
-          start: 'top top',
-          end: 'bottom bottom',
-          scrub: 0.5,
-          invalidateOnRefresh: true,
-          onUpdate: (self) => {
-            const targetFrame = Math.min(frameCount - 1, Math.max(0, Math.round(frameObj.frame)));
+      const p = currentProgressRef.current;
+      const targetFrame = Math.min(frameCount - 1, Math.max(0, Math.round(p * (frameCount - 1))));
 
-            // Direct progress line transform for immediate 120fps feedback
-            if (progressBarRef.current) {
-              progressBarRef.current.style.transform = `scaleX(${self.progress})`;
-            }
+      // Draw canvas frame
+      drawFrame(targetFrame);
 
-            if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = requestAnimationFrame(() => {
-              drawFrame(targetFrame);
-              onProgress?.(self.progress);
-            });
-          },
-        },
-      });
-    }, containerRef);
+      // Notify parent component for UI telemetry (compass, badges, chapters)
+      onProgressRef.current?.(p);
 
-    // Initial measurement refresh after setup
-    requestAnimationFrame(() => {
-      ScrollTrigger.refresh();
-    });
+      // Update hardware-accelerated progress line
+      if (progressLineRef.current) {
+        progressLineRef.current.style.transform = `scaleX(${p})`;
+      }
+
+      animId = requestAnimationFrame(tick);
+    };
+
+    // Listen to all scroll and wheel events
+    window.addEventListener('scroll', computeProgressFromScroll, { passive: true });
+    window.addEventListener('resize', computeProgressFromScroll, { passive: true });
+
+    // Start loop
+    animId = requestAnimationFrame(tick);
 
     return () => {
-      ctx.revert();
-      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      cancelAnimationFrame(animId);
+      window.removeEventListener('scroll', computeProgressFromScroll);
+      window.removeEventListener('resize', computeProgressFromScroll);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frameCount, onProgress, reducedMotion]);
+  }, [frameCount, drawFrame, reducedMotion]);
 
-  // Initial paint and refresh ScrollTrigger when ready
-  useEffect(() => {
-    if (loadedCount > 0) {
-      drawFrame(0);
-      
-      // Refresh ScrollTrigger after images are loaded
-      if (loadedCount >= 8) { // Refresh after first keyframes are loaded
-        requestAnimationFrame(() => {
-          ScrollTrigger.refresh();
-        });
-      }
+  // ── Interactive Mouse & Touch Drag Scrubbing ──────────────────────────
+  const handlePointerDown = (e: React.PointerEvent) => {
+    isDraggingRef.current = true;
+    dragStartXRef.current = e.clientX;
+    dragStartProgressRef.current = currentProgressRef.current;
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    const deltaX = e.clientX - dragStartXRef.current;
+    const sensitivity = 0.0022; // smooth scrub distance
+    const newProgress = Math.max(0, Math.min(1, dragStartProgressRef.current + deltaX * sensitivity));
+    targetProgressRef.current = newProgress;
+    currentProgressRef.current = newProgress;
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    isDraggingRef.current = false;
+    try {
+      (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+    } catch {
+      // ignore
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadedCount]);
+  };
 
   const loadPercent = Math.min(100, Math.round((loadedCount / frameCount) * 100));
 
@@ -312,10 +340,18 @@ export default function ScrollSequence({
       ref={containerRef}
       className="scroll-sequence"
       aria-label={alt}
-      style={{ position: 'relative', height: reducedMotion ? '100vh' : '500vh', background: '#080808' }}
+      style={{
+        position: 'relative',
+        height: reducedMotion ? '100vh' : '400vh',
+        background: '#080808',
+      }}
     >
       <div
         className="sequence-sticky"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         style={{
           position: 'sticky',
           top: 0,
@@ -323,6 +359,8 @@ export default function ScrollSequence({
           width: '100%',
           overflow: 'hidden',
           background: '#080808',
+          cursor: 'grab',
+          touchAction: 'pan-y',
         }}
       >
         {loadError ? (
@@ -353,7 +391,7 @@ export default function ScrollSequence({
           />
         )}
 
-        {/* Preload overlay */}
+        {/* Loading status badge */}
         {!isReady && !loadError && (
           <div
             style={{
@@ -373,6 +411,7 @@ export default function ScrollSequence({
               borderRadius: '20px',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255,255,255,0.12)',
+              pointerEvents: 'none',
             }}
           >
             <div
@@ -385,19 +424,56 @@ export default function ScrollSequence({
                 animation: 'spin 1s linear infinite',
               }}
             />
-            <span>Loading 360° · {loadPercent}%</span>
+            <span>360° Ready · {loadPercent}%</span>
           </div>
         )}
 
-        {/* Hero story content overlay */}
+        {/* Story Overlay Layer */}
         {children}
 
-        {/* Scroll sequence progress line */}
-        <div className="sequence-progress" aria-hidden="true" style={{ zIndex: 12 }}>
+        {/* Interactive Scrub Cue */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '36px',
+            right: '3vw',
+            zIndex: 15,
+            color: 'rgba(255,255,255,0.5)',
+            fontSize: '9px',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            pointerEvents: 'none',
+          }}
+        >
+          <span>Scroll or Drag to Rotate 360°</span>
+        </div>
+
+        {/* Scroll Sequence Progress Line */}
+        <div
+          className="sequence-progress"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: '3vw',
+            right: '3vw',
+            bottom: '18px',
+            height: '1px',
+            background: 'rgba(255,255,255,0.25)',
+            zIndex: 12,
+          }}
+        >
           <span
-            ref={progressBarRef}
+            ref={progressLineRef}
             style={{
+              display: 'block',
+              height: '100%',
+              background: '#ff4d23',
+              transformOrigin: 'left',
               transform: 'scaleX(0)',
+              transition: 'none',
             }}
           />
         </div>
