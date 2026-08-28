@@ -56,7 +56,11 @@ export default function ShopPage() {
   const filterCount = ['brand', 'category', 'size', 'gender', 'maxPrice', 'discount'].filter((key) => params.has(key)).length;
 
   return <div className="shop-page page-shell">
-    <header className="shop-hero"><p className="eyebrow accent">50–75% OFF MRP</p><h1>THE VAULT<br /><span>IS OPEN.</span></h1><p>Original, brand-new footwear. Curated hard. Priced right.</p></header>
+    <header className="shop-hero">
+      <p className="eyebrow accent">50–75% OFF MRP</p>
+      <h1>THE VAULT<br /><span>IS OPEN.</span></h1>
+      <p>Original, brand-new footwear. Curated hard. Priced right.</p>
+    </header>
     <div className="catalog-toolbar"><button className="filter-trigger" onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={18} /> Filters {filterCount > 0 && <span>{filterCount}</span>}</button><p>{loading ? 'Curating…' : `${products.length} pairs`}</p><label>Sort <select value={params.get('sort') || 'newest'} onChange={(event) => update('sort', event.target.value)}><option value="newest">Newest</option><option value="popular">Most popular</option><option value="price-asc">Price low–high</option><option value="price-desc">Price high–low</option><option value="discount">Biggest discount</option></select><ChevronDown size={16} /></label></div>
     <div className="catalog-layout">
       <aside className={`filters ${filtersOpen ? 'open' : ''}`}><div className="filter-mobile-head"><strong>Filters</strong><button onClick={() => setFiltersOpen(false)}><X /></button></div>

@@ -133,9 +133,9 @@ export default function Layout() {
     }
   };
 
-  const handleSelectProduct = (productId: number) => {
+  const handleSelectProduct = (slug: string) => {
     setSearchOpen(false);
-    navigate(`/product/${productId}`);
+    navigate(`/product/${slug}`);
   };
 
   return (
@@ -144,9 +144,13 @@ export default function Layout() {
         Skip to content
       </a>
       <div className="promo-bar">
-        <span>100% ORIGINAL</span>
-        <strong>50–75% OFF MRP</strong>
-        <span>BRAND NEW</span>
+        <div className="promo-track">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <span key={index}>
+              100% ORIGINAL <strong>50–75% OFF MRP</strong> BRAND NEW <i /> AUTHENTICATED VAULT
+            </span>
+          ))}
+        </div>
       </div>
       <header className="site-header" ref={searchRef}>
         <div className="nav-wrap">
@@ -226,7 +230,13 @@ export default function Layout() {
                     {liveResults.map((product) => (
                       <div
                         key={product.id}
-                        onClick={() => handleSelectProduct(product.id)}
+                        onClick={() => handleSelectProduct(product.slug)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleSelectProduct(product.slug);
+                          }
+                        }}
                         className="search-result-item"
                         role="button"
                         tabIndex={0}
@@ -314,105 +324,35 @@ export default function Layout() {
 
       {/* Floating Add to Cart Toast Notification */}
       {toast && (
-        <aside
-          style={{
-            position: 'fixed',
-            bottom: '2rem',
-            right: 'clamp(1rem, 3vw, 2.5rem)',
-            zIndex: 9999,
-            background: 'rgba(15, 15, 15, 0.95)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.18)',
-            borderRadius: '12px',
-            padding: '0.85rem 1.15rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            boxShadow: '0 25px 50px rgba(0,0,0,0.7)',
-            maxWidth: '420px',
-            pointerEvents: 'auto',
-          }}
-          role="status"
-          aria-live="polite"
-        >
+        <aside className="cart-toast" role="status" aria-live="polite">
           <img
             src={getProductImage(toast.product)}
             alt={toast.product.name}
-            style={{ width: '46px', height: '46px', objectFit: 'cover', borderRadius: '6px', background: '#222' }}
             onError={(e) => handleImageError(e, '/images/solevault-hero.webp')}
           />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                fontSize: '10px',
-                color: '#ff4d23',
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
+          <div>
+            <p>
               <Check size={13} /> ADDED TO BAG · UK {toast.size}
-            </div>
-            <div
-              style={{
-                fontSize: '13px',
-                fontWeight: 700,
-                color: '#fff',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                marginTop: '1px',
-              }}
-            >
-              {toast.product.name}
-            </div>
+            </p>
+            <strong>{toast.product.name}</strong>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Link
-              to="/cart"
-              onClick={dismissToast}
-              style={{
-                background: '#ff4d23',
-                color: '#fff',
-                padding: '0.45rem 0.8rem',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: 700,
-                textDecoration: 'none',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              View Bag
-            </Link>
-            <button
-              onClick={dismissToast}
-              style={{
-                background: 'transparent',
-                border: 0,
-                color: '#888',
-                cursor: 'pointer',
-                padding: '4px',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              aria-label="Dismiss notification"
-            >
-              <X size={15} />
-            </button>
-          </div>
+          <Link to="/cart" onClick={dismissToast}>
+            View Bag
+          </Link>
+          <button onClick={dismissToast} aria-label="Dismiss notification">
+            <X size={15} />
+          </button>
         </aside>
       )}
 
-      <main id="main">
+      <main id="main" key={location.pathname} className="page-enter">
         <Outlet />
       </main>
 
       <footer className="site-footer">
+        <div className="footer-mark" aria-hidden="true">
+          SOLE<span>VAULT</span>
+        </div>
         <div className="footer-top">
           <span className="wordmark light">
             SOLE<span>VAULT</span>

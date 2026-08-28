@@ -19,8 +19,8 @@ const chapters = [
     at: 0,
     number: '01',
     eyebrow: '01 / The Reveal',
-    title: 'Not just seen. Introduced.',
-    body: 'A pair enters the frame like an archive object: shape first, details second, hype last.',
+    title: 'A silhouette, then a story.',
+    body: 'The vault opens in slow light. Shape first. Texture next. Hype never makes the cut.',
     action: 'Begin the inspection',
     motion: 'rise',
   },
@@ -28,8 +28,8 @@ const chapters = [
     at: 0.34,
     number: '02',
     eyebrow: '02 / The Proof',
-    title: 'Details do the talking.',
-    body: 'Stitch rhythm, texture, structure, colorway: the rotation becomes evidence, not decoration.',
+    title: 'Every degree is evidence.',
+    body: 'Stitch rhythm, grain, structure, colorway — the rotation is the inspection, not the show.',
     action: 'Read the build',
     motion: 'slide',
   },
@@ -38,7 +38,7 @@ const chapters = [
     number: '03',
     eyebrow: '03 / The Unlock',
     title: 'Verified. Priced. Yours.',
-    body: 'The noise falls away. What remains is original footwear, clean value, and a pair ready to leave the vault.',
+    body: 'The noise falls away. What remains is original footwear, honest value, and a pair ready to leave.',
     action: 'Enter the vault',
     motion: 'cut',
   },
@@ -104,6 +104,7 @@ export default function HeroScrollExperience() {
   const lastDrawnFrame = useRef(-1);
   const targetFrame = useRef(0);
   const refreshTimer = useRef<number | null>(null);
+  const drawFrameHandle = useRef<number | null>(null);
   const idleHandle = useRef<number | null>(null);
   const fallbackIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ready, setReady] = useState(false);
@@ -133,6 +134,23 @@ export default function HeroScrollExperience() {
       const height = sticky.clientHeight;
       drawCover(canvas, image, width, height);
       lastDrawnFrame.current = index;
+    };
+
+    const drawNearestFrame = () => {
+      const desired = targetFrame.current;
+      let nearest = -1;
+      let nearestDistance = Number.POSITIVE_INFINITY;
+
+      frameCache.current.forEach((_image, index) => {
+        const distance = Math.abs(index - desired);
+        if (distance < nearestDistance) {
+          nearest = index;
+          nearestDistance = distance;
+        }
+      });
+
+      if (nearest >= 0) drawFrame(nearest);
+      if (!cancelled) drawFrameHandle.current = window.requestAnimationFrame(drawNearestFrame);
     };
 
     const resizeCanvas = () => {
@@ -213,7 +231,7 @@ export default function HeroScrollExperience() {
       queueFrame(nextFrame);
       queueFrame(nextFrame + 1);
       queueFrame(nextFrame - 1);
-      drawFrame(nextFrame);
+      for (let offset = -4; offset <= 4; offset += 1) queueFrame(nextFrame + offset);
 
       const nextChapter = getChapterIndex(progress);
       setChapterIndex((current) => (current === nextChapter ? current : nextChapter));
@@ -225,6 +243,7 @@ export default function HeroScrollExperience() {
     const stickyObserver = new ResizeObserver(resizeCanvas);
 
     resizeCanvas();
+    drawFrameHandle.current = window.requestAnimationFrame(drawNearestFrame);
     loadFrame(0)
       .then(() => {
         if (!cancelled) {
@@ -278,6 +297,10 @@ export default function HeroScrollExperience() {
     return () => {
       cancelled = true;
       context?.revert();
+      if (drawFrameHandle.current !== null) {
+        window.cancelAnimationFrame(drawFrameHandle.current);
+        drawFrameHandle.current = null;
+      }
       bodyObserver.disconnect();
       stickyObserver.disconnect();
       loadQueue.current.clear();
@@ -304,6 +327,10 @@ export default function HeroScrollExperience() {
         <div className="hse-light-sweep" aria-hidden="true" />
 
         <div className={`hse-content${ready ? ' hse-content-ready' : ''}`}>
+          <p className="hse-watermark" aria-hidden="true">
+            {chapter.number}
+          </p>
+
           <div className="hse-copy" ref={copyRef}>
             <div className={`hse-copy-stage hse-motion-${chapter.motion}`} key={chapter.number}>
               <p className="hse-kicker">{chapter.eyebrow}</p>
@@ -313,13 +340,29 @@ export default function HeroScrollExperience() {
                 <Link className="hse-button hse-button-primary" to="/shop">
                   {chapter.action} <ArrowRight size={16} />
                 </Link>
+                <Link className="hse-button" to="/gallery">
+                  Aero gallery
+                </Link>
               </div>
             </div>
           </div>
 
+          <ol className="hse-chapter-rail" aria-hidden="true">
+            {chapters.map((entry, index) => (
+              <li key={entry.number} className={index === chapterIndex ? 'is-active' : ''}>
+                <span>{entry.number}</span>
+                <small>{entry.eyebrow.split(' / ')[1]}</small>
+              </li>
+            ))}
+          </ol>
+
           <div className="hse-scroll-hint" aria-hidden="true">
             <ChevronDown size={16} />
             <span>Scroll to inspect</span>
+          </div>
+
+          <div className="hse-progress" aria-hidden="true">
+            <i />
           </div>
         </div>
       </div>
