@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Reveal from '../components/motion/Reveal';
+import MagneticButton from '../components/ui/MagneticButton';
 import { ErrorState, LoadingState } from '../components/StatePanel';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -248,15 +249,15 @@ export default function ProductPage() {
 
           <Reveal delay={220} from="scale">
             <div className="buy-actions">
-              <button className="button dark" onClick={() => add(false)}>
+              <MagneticButton strength={0.2} className="button dark" onClick={() => add(false)}>
                 <ShoppingBag size={18} /> Add to cart
-              </button>
-              <button className="button outline" onClick={wish}>
+              </MagneticButton>
+              <MagneticButton strength={0.2} className="button outline" onClick={wish}>
                 <Heart size={18} /> Wishlist
-              </button>
-              <button className="button accent full" onClick={() => add(true)}>
+              </MagneticButton>
+              <MagneticButton strength={0.2} className="button accent full" onClick={() => add(true)}>
                 Buy now
-              </button>
+              </MagneticButton>
             </div>
           </Reveal>
 

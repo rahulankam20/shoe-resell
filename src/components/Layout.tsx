@@ -25,6 +25,7 @@ export default function Layout() {
   const [query, setQuery] = useState('');
   const [liveResults, setLiveResults] = useState<Product[]>([]);
   const [searching, setSearching] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -32,6 +33,14 @@ export default function Layout() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 30);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -152,7 +161,7 @@ export default function Layout() {
           ))}
         </div>
       </div>
-      <header className="site-header" ref={searchRef}>
+      <header className={`site-header ${scrolled ? 'is-scrolled' : ''}`} ref={searchRef}>
         <div className="nav-wrap">
           <button className="mobile-menu-button" onClick={() => setMenuOpen(true)} aria-label="Open menu">
             <Menu />
