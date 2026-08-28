@@ -65,6 +65,7 @@ export default function ProductPage() {
             alt={`${product.brand} ${product.name}, view ${selectedImage + 1}`}
             onError={(e) => handleImageError(e, '/images/solevault-hero.webp')}
           />
+          <span className="gallery-glint" aria-hidden="true" />
         </div>
         {product.images.length > 1 && (
           <div className="thumbnails">

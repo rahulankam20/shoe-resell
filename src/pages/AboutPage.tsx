@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, ShieldCheck, Sparkles, Truck, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSEOMeta } from '../hooks/useSEOMeta';
+import Reveal from '../components/motion/Reveal';
 
 export default function AboutPage() {
   useSEOMeta({
@@ -23,37 +24,42 @@ export default function AboutPage() {
         </p>
       </header>
 
-      {/* Grid of Core Pillars */}
       <section className="about-pillars-grid">
-        <article className="about-pillar-card">
-          <div className="about-pillar-icon">
-            <Sparkles size={22} />
-          </div>
-          <h3>The Mission</h3>
-          <p>
-            SOLEVAULT was founded to solve a broken resale market. We bypass secondary inflation by sourcing authentic deadstock pairs directly from authorized liquidations, distributor overstocks, and authenticated vaults, passing 50–75% savings directly to collectors.
-          </p>
-        </article>
+        <Reveal from="fold">
+          <article className="about-pillar-card">
+            <div className="about-pillar-icon">
+              <Sparkles size={22} />
+            </div>
+            <h3>The Mission</h3>
+            <p>
+              SOLEVAULT was founded to solve a broken resale market. We bypass secondary inflation by sourcing authentic deadstock pairs directly from authorized liquidations, distributor overstocks, and authenticated vaults, passing 50–75% savings directly to collectors.
+            </p>
+          </article>
+        </Reveal>
 
-        <article className="about-pillar-card">
-          <div className="about-pillar-icon">
-            <ShieldCheck size={22} />
-          </div>
-          <h3>Physical Verification</h3>
-          <p>
-            Every single silhouette undergoes a rigorous multi-point physical authentication inspection. Our specialists examine stitch tension, material grain, UV-reactive markings, font kerning on factory SKU tags, and packaging integrity before any pair leaves our facility.
-          </p>
-        </article>
+        <Reveal from="fold" delay={90}>
+          <article className="about-pillar-card">
+            <div className="about-pillar-icon">
+              <ShieldCheck size={22} />
+            </div>
+            <h3>Physical Verification</h3>
+            <p>
+              Every single silhouette undergoes a rigorous multi-point physical authentication inspection. Our specialists examine stitch tension, material grain, UV-reactive markings, font kerning on factory SKU tags, and packaging integrity before any pair leaves our facility.
+            </p>
+          </article>
+        </Reveal>
 
-        <article className="about-pillar-card">
-          <div className="about-pillar-icon">
-            <Truck size={22} />
-          </div>
-          <h3>Collector-Grade Shipping</h3>
-          <p>
-            We treat every order as a grail piece. All shoes are double-boxed in high-impact corrugated outer containers with moisture-sealed packaging, ensuring pristine shoeboxes and tamper-evident delivery across India.
-          </p>
-        </article>
+        <Reveal from="fold" delay={180}>
+          <article className="about-pillar-card">
+            <div className="about-pillar-icon">
+              <Truck size={22} />
+            </div>
+            <h3>Collector-Grade Shipping</h3>
+            <p>
+              We treat every order as a grail piece. All shoes are double-boxed in high-impact corrugated outer containers with moisture-sealed packaging, ensuring pristine shoeboxes and tamper-evident delivery across India.
+            </p>
+          </article>
+        </Reveal>
       </section>
 
       {/* Brand Narrative Section */}
