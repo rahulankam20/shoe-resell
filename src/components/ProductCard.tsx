@@ -6,6 +6,7 @@ import { money, authHeaders } from '../lib/format';
 import { getProductImage, handleImageError } from '../lib/images';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+import TiltCard from './motion/TiltCard';
 
 export default function ProductCard({
   product,
@@ -43,31 +44,33 @@ export default function ProductCard({
 
   return (
     <article className="product-card">
-      <div className="product-media">
-        <Link to={`/product/${product.slug}`} aria-label={`View ${product.brand} ${product.name}`}>
-          <img
-            src={imageSrc}
-            alt={`${product.brand} ${product.name}`}
-            loading="lazy"
-            decoding="async"
-            onError={(e) => handleImageError(e, '/images/solevault-hero.webp')}
-          />
-        </Link>
-        <span className="discount-badge">{product.discount}% OFF</span>
-        <button
-          className={`icon-button wishlist-button ${wishlisted ? 'active' : ''}`}
-          onClick={toggleWishlist}
-          disabled={busy}
-          aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-        >
-          <Heart size={18} fill={wishlisted ? 'currentColor' : 'none'} />
-        </button>
-        {availableSize && (
-          <button className="quick-add" onClick={() => addItem(product, availableSize, 1)}>
-            <Plus size={16} /> Quick add · UK {availableSize}
+      <TiltCard>
+        <div className="product-media">
+          <Link to={`/product/${product.slug}`} aria-label={`View ${product.brand} ${product.name}`}>
+            <img
+              src={imageSrc}
+              alt={`${product.brand} ${product.name}`}
+              loading="lazy"
+              decoding="async"
+              onError={(e) => handleImageError(e, '/images/solevault-hero.webp')}
+            />
+          </Link>
+          <span className="discount-badge">{product.discount}% OFF</span>
+          <button
+            className={`icon-button wishlist-button ${wishlisted ? 'active' : ''}`}
+            onClick={toggleWishlist}
+            disabled={busy}
+            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <Heart size={18} fill={wishlisted ? 'currentColor' : 'none'} />
           </button>
-        )}
-      </div>
+          {availableSize && (
+            <button className="quick-add" onClick={() => addItem(product, availableSize, 1)}>
+              <Plus size={16} /> Quick add · UK {availableSize}
+            </button>
+          )}
+        </div>
+      </TiltCard>
       <div className="product-info">
         <p className="eyebrow">{product.brand}</p>
         <Link to={`/product/${product.slug}`}>
