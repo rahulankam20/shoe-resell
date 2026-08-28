@@ -2,13 +2,17 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
-import Layout from './components/Layout';
+import LayoutEnhanced from './components/ui/LayoutEnhanced';
 import { AdminRoute, ProtectedRoute } from './components/ProtectedRoute';
 import { LoadingState } from './components/StatePanel';
 
-const HomePage = lazy(() => import('./pages/HomePage'));
-const ShopPage = lazy(() => import('./pages/ShopPage'));
-const ProductPage = lazy(() => import('./pages/ProductPage'));
+// Import enhanced animation styles
+import './styles/animations.css';
+
+// Lazy load pages for better performance
+const HomePageEnhanced = lazy(() => import('./pages/HomePageEnhanced'));
+const ShopPageEnhanced = lazy(() => import('./pages/ShopPageEnhanced'));
+const ProductPageEnhanced = lazy(() => import('./pages/ProductPageEnhanced'));
 const CartPage = lazy(() => import('./pages/CartPage'));
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
@@ -38,10 +42,10 @@ export default function App() {
             }
           >
             <Routes>
-              <Route element={<Layout />}>
-                <Route index element={<HomePage />} />
-                <Route path="shop" element={<ShopPage />} />
-                <Route path="product/:slug" element={<ProductPage />} />
+              <Route element={<LayoutEnhanced />}>
+                <Route index element={<HomePageEnhanced />} />
+                <Route path="shop" element={<ShopPageEnhanced />} />
+                <Route path="product/:slug" element={<ProductPageEnhanced />} />
                 <Route path="cart" element={<CartPage />} />
                 <Route path="login" element={<AuthPage />} />
                 <Route
