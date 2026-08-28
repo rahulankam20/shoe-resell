@@ -32,13 +32,13 @@ export default function HomeScrollScenes({ active = true }: { active?: boolean }
         },
       );
 
-      // Letter-spacing scrub only (no opacity — Reveal owns opacity)
-      gsap.fromTo('.kiro-manifesto h2',
-        { letterSpacing: '-0.09em' },
+      // Letter-spacing scrub only (no opacity — AnimatedSection owns opacity)
+      gsap.fromTo('.manifesto h2',
+        { letterSpacing: '-0.08em' },
         {
           letterSpacing: '-0.045em',
           ease: 'none',
-          scrollTrigger: { trigger: '.kiro-manifesto', start: 'top bottom', end: 'bottom top', scrub: true },
+          scrollTrigger: { trigger: '.manifesto', start: 'top bottom', end: 'bottom top', scrub: true },
         },
       );
 
