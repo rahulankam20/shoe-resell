@@ -761,3 +761,135 @@ export function AuthPageSkeleton() {
     </div>
   );
 }
+
+/**
+ * Cart / Shopping Bag Page Skeleton (Header + 2-Column Items List & Order Summary)
+ */
+export function CartPageSkeleton() {
+  return (
+    <div className="cart-page page-shell page-enter" aria-busy="true" aria-label="Loading shopping cart">
+      {/* Header */}
+      <header className="page-title" style={{ display: 'grid', gap: '0.5rem', marginBottom: '2.5rem' }}>
+        <Skeleton width="130px" height="12px" variant="accent" />
+        <Skeleton width="280px" height="clamp(2.5rem, 5vw, 4.5rem)" />
+        <Skeleton width="160px" height="14px" />
+      </header>
+
+      {/* 2-Column Cart Layout */}
+      <div className="cart-layout">
+        {/* Left Column: Cart Items List */}
+        <section className="cart-items" style={{ display: 'grid', gap: '1.25rem' }}>
+          {[1, 2].map((i) => (
+            <article key={i} className="cart-item" style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: '1.5rem', padding: '1.5rem', border: '1px solid var(--line)', background: '#fff' }}>
+              <div style={{ width: '120px', height: '120px', background: '#e4e2de' }}>
+                <Skeleton width="100%" height="100%" />
+              </div>
+              <div className="cart-item-copy" style={{ display: 'grid', gap: '0.6rem' }}>
+                <Skeleton width="90px" height="10px" />
+                <Skeleton width="75%" height="24px" />
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '0.5rem' }}>
+                  <Skeleton width="80px" height="34px" borderRadius="3px" />
+                  <Skeleton width="90px" height="34px" borderRadius="3px" />
+                </div>
+                <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', marginTop: '0.3rem' }}>
+                  <Skeleton width="80px" height="20px" />
+                  <Skeleton width="60px" height="14px" />
+                </div>
+              </div>
+              <div>
+                <Skeleton width="28px" height="28px" borderRadius="4px" />
+              </div>
+            </article>
+          ))}
+        </section>
+
+        {/* Right Column: Order Summary Box */}
+        <aside className="order-summary" style={{ display: 'grid', gap: '1rem', padding: '2rem', border: '1px solid var(--line)', background: '#fff' }}>
+          <Skeleton width="110px" height="10px" />
+          <Skeleton width="160px" height="36px" />
+          <div style={{ display: 'grid', gap: '0.75rem', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', padding: '1.25rem 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Skeleton width="35%" height="14px" />
+              <Skeleton width="25%" height="14px" />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Skeleton width="40%" height="14px" variant="accent" />
+              <Skeleton width="25%" height="14px" variant="accent" />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Skeleton width="30%" height="14px" />
+              <Skeleton width="20%" height="14px" />
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Skeleton width="30%" height="20px" />
+            <Skeleton width="35%" height="24px" />
+          </div>
+          <Skeleton width="100%" height="34px" borderRadius="2px" />
+          <Skeleton width="100%" height="50px" borderRadius="2px" variant="accent" style={{ marginTop: '0.5rem' }} />
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.4rem' }}>
+            <Skeleton width="200px" height="12px" />
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Checkout Page Skeleton (Form fields + Order Summary)
+ */
+export function CheckoutPageSkeleton() {
+  return (
+    <div className="checkout-page page-shell page-enter" aria-busy="true" aria-label="Loading checkout">
+      <div style={{ marginBottom: '1.5rem' }}>
+        <Skeleton width="120px" height="16px" />
+      </div>
+
+      <div className="checkout-grid">
+        {/* Left Column: Form */}
+        <div className="checkout-form" style={{ display: 'grid', gap: '2rem' }}>
+          <div>
+            <Skeleton width="140px" height="12px" variant="accent" />
+            <Skeleton width="360px" height="clamp(2.5rem, 5vw, 4.5rem)" style={{ margin: '0.75rem 0' }} />
+          </div>
+
+          <div style={{ border: '1px solid var(--line)', padding: '1.5rem', background: '#fff', display: 'grid', gap: '1.25rem' }}>
+            <Skeleton width="160px" height="18px" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <Skeleton height="46px" borderRadius="2px" />
+              <Skeleton height="46px" borderRadius="2px" />
+            </div>
+            <Skeleton height="46px" borderRadius="2px" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+              <Skeleton height="46px" borderRadius="2px" />
+              <Skeleton height="46px" borderRadius="2px" />
+              <Skeleton height="46px" borderRadius="2px" />
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Review & Total */}
+        <div className="checkout-summary-wrap">
+          <aside className="order-summary" style={{ display: 'grid', gap: '1rem', padding: '2rem', border: '1px solid var(--line)', background: '#fff' }}>
+            <Skeleton width="130px" height="12px" />
+            <Skeleton width="160px" height="36px" />
+            <div style={{ display: 'grid', gap: '0.75rem', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', padding: '1.25rem 0' }}>
+              {[1, 2].map((i) => (
+                <div key={i} style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                  <Skeleton width="48px" height="48px" borderRadius="3px" />
+                  <div style={{ flex: 1, display: 'grid', gap: '0.3rem' }}>
+                    <Skeleton width="75%" height="13px" />
+                    <Skeleton width="40%" height="10px" />
+                  </div>
+                  <Skeleton width="50px" height="14px" />
+                </div>
+              ))}
+            </div>
+            <Skeleton width="100%" height="52px" borderRadius="2px" variant="accent" style={{ marginTop: '0.5rem' }} />
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+}
