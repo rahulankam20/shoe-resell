@@ -30,9 +30,12 @@ export default function AccountPage() {
   const [message, setMessage] = useState('');
 
   // Password reset state in Account
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPass, setShowOldPass] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordBusy, setPasswordBusy] = useState(false);
@@ -68,14 +71,32 @@ export default function AccountPage() {
     setPasswordError('');
     setPasswordMessage('');
 
-    if (newPassword.length < 6) return setPasswordError('Password must be at least 6 characters');
-    if (newPassword !== confirmPassword) return setPasswordError('Passwords do not match');
+    if (!oldPassword) return setPasswordError('Please enter your current/old password');
+    if (newPassword.length < 6) return setPasswordError('New password must be at least 6 characters');
+    if (newPassword !== confirmPassword) return setPasswordError('New passwords do not match');
+    if (newPassword === oldPassword) return setPasswordError('New password must be different from current password');
+
+    const userEmail = profile?.email;
+    if (!userEmail) return setPasswordError('User session expired. Please refresh the page.');
 
     setPasswordBusy(true);
     try {
+      // 1. Verify old password by attempting sign-in
+      const { error: verifyErr } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: oldPassword,
+      });
+
+      if (verifyErr) {
+        return setPasswordError('Incorrect old password. Please enter the correct current password.');
+      }
+
+      // 2. If old password verified successfully, update to new password
       const { error: updateErr } = await supabase.auth.updateUser({ password: newPassword });
       if (updateErr) throw updateErr;
+
       setPasswordMessage('Password updated successfully');
+      setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: any) {
@@ -191,7 +212,33 @@ export default function AccountPage() {
                   <div className="account-panel">
                     <p className="eyebrow">SECURITY</p>
                     <h2>RESET PASSWORD</h2>
+                    <p style={{ color: 'var(--muted)', fontSize: '12px', marginBottom: '1.25rem' }}>
+                      Enter your current password to authorize setting a new password.
+                    </p>
+
                     <form onSubmit={handleUpdatePassword}>
+                      <label>
+                        Current Password
+                        <div className="password-input">
+                          <input
+                            type={showOldPass ? 'text' : 'password'}
+                            value={oldPassword}
+                            onChange={(e) => setOldPassword(e.target.value)}
+                            placeholder="Enter your current password"
+                            required
+                            disabled={passwordBusy}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowOldPass(!showOldPass)}
+                            aria-label={showOldPass ? 'Hide password' : 'Show password'}
+                            disabled={passwordBusy}
+                          >
+                            {showOldPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </label>
+
                       <label>
                         New Password
                         <div className="password-input">
@@ -208,16 +255,18 @@ export default function AccountPage() {
                             type="button"
                             onClick={() => setShowPass(!showPass)}
                             aria-label={showPass ? 'Hide password' : 'Show password'}
+                            disabled={passwordBusy}
                           >
-                            {showPass ? <EyeOff /> : <Eye />}
+                            {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
                       </label>
+
                       <label>
                         Confirm New Password
                         <div className="password-input">
                           <input
-                            type={showPass ? 'text' : 'password'}
+                            type={showConfirmPass ? 'text' : 'password'}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="Re-enter new password"
@@ -225,6 +274,14 @@ export default function AccountPage() {
                             minLength={6}
                             disabled={passwordBusy}
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPass(!showConfirmPass)}
+                            aria-label={showConfirmPass ? 'Hide password' : 'Show password'}
+                            disabled={passwordBusy}
+                          >
+                            {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
                         </div>
                       </label>
 
@@ -234,7 +291,7 @@ export default function AccountPage() {
                       <button className="button dark" disabled={passwordBusy}>
                         {passwordBusy ? (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <LoaderCircle className="spin" size={15} /> Updating…
+                            <LoaderCircle className="spin" size={15} /> Verifying & Updating…
                           </span>
                         ) : (
                           <>
