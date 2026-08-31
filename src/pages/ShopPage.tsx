@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import { EmptyState, ErrorState, LoadingState } from '../components/StatePanel';
+import { EmptyState, ErrorState } from '../components/StatePanel';
+import { ProductGridSkeleton } from '../components/ui/Skeleton';
 import { useSEOMeta } from '../hooks/useSEOMeta';
 import type { Brand, Category, Product } from '../types';
 
@@ -73,7 +74,7 @@ export default function ShopPage() {
         <FilterSelect label="Minimum discount" value={params.get('discount') || ''} onChange={(value) => update('discount', value)} options={[['40', '40% and above'], ['50', '50% and above'], ['60', '60% and above'], ['70', '70% and above']]} />
         <button className="button dark full" onClick={() => setFiltersOpen(false)}>Show {products.length} pairs</button><button className="clear-filters" onClick={() => setParams(new URLSearchParams())}>Clear all filters</button>
       </aside>
-      <section className="catalog-results" aria-live="polite">{loading ? <LoadingState /> : error ? <ErrorState message={error} retry={fetchProducts} /> : products.length ? <div className="product-grid">{products.map((product) => <ProductCard key={product.id} product={product} />)}</div> : <EmptyState title="NO PAIRS FOUND" copy="Try changing a filter or searching for a different style." action={<button className="button dark" onClick={() => setParams(new URLSearchParams())}>Reset filters</button>} />}</section>
+      <section className="catalog-results" aria-live="polite">{loading ? <ProductGridSkeleton count={8} /> : error ? <ErrorState message={error} retry={fetchProducts} /> : products.length ? <div className="product-grid">{products.map((product) => <ProductCard key={product.id} product={product} />)}</div> : <EmptyState title="NO PAIRS FOUND" copy="Try changing a filter or searching for a different style." action={<button className="button dark" onClick={() => setParams(new URLSearchParams())}>Reset filters</button>} />}</section>
     </div>
     {filtersOpen && <button className="filter-backdrop" aria-label="Close filters" onClick={() => setFiltersOpen(false)} />}
   </div>;

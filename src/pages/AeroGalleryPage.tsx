@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useSEOMeta } from '../hooks/useSEOMeta';
 import { money } from '../lib/format';
 import { getProductImage } from '../lib/images';
+import { AeroGallerySkeleton } from '../components/ui/Skeleton';
 import type { Product } from '../types';
 
 interface GalleryShoe {
@@ -148,8 +149,11 @@ export default function AeroGalleryPage() {
 
       {/* 3. Exhibition Masonry / 3D Perspective Grid */}
       <section className="aero-gallery-container page-shell">
-        <div className="aero-grid">
-          {filteredItems.map((item, idx) => (
+        {loading ? (
+          <AeroGallerySkeleton count={6} />
+        ) : (
+          <div className="aero-grid">
+            {filteredItems.map((item, idx) => (
             <article
               key={item.product.id}
               className="aero-card"
@@ -222,6 +226,7 @@ export default function AeroGalleryPage() {
             </article>
           ))}
         </div>
+        )}
       </section>
 
       {/* 4. Focal Spotlight Inspection Modal */}

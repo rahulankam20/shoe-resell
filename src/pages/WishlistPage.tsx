@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import { EmptyState, ErrorState, LoadingState } from '../components/StatePanel';
+import { EmptyState, ErrorState } from '../components/StatePanel';
+import { ProductGridSkeleton } from '../components/ui/Skeleton';
 import { authHeaders } from '../lib/format';
 import { useSEOMeta } from '../hooks/useSEOMeta';
 import type { Product } from '../types';
@@ -22,5 +23,5 @@ export default function WishlistPage() {
     catch (err) { setError(err instanceof Error ? err.message : 'Something went wrong'); } finally { setLoading(false); }
   }, []);
   useEffect(() => { fetchWishlist(); }, [fetchWishlist]);
-  return <div className="page-shell wishlist-page"><header className="page-title"><p className="eyebrow accent">SAVED FOR LATER</p><h1>YOUR WISHLIST.</h1><p>Keep the good pairs close.</p></header>{loading ? <LoadingState /> : error ? <ErrorState message={error} retry={fetchWishlist} /> : products.length ? <div className="product-grid">{products.map((product) => <ProductCard key={product.id} product={product} onWishlistChange={fetchWishlist} />)}</div> : <EmptyState title="NOTHING SAVED YET" copy="Tap the heart on a pair you don't want to lose." action={<Link className="button dark" to="/shop">Find your next pair</Link>} />}</div>;
+  return <div className="page-shell wishlist-page"><header className="page-title"><p className="eyebrow accent">SAVED FOR LATER</p><h1>YOUR WISHLIST.</h1><p>Keep the good pairs close.</p></header>{loading ? <ProductGridSkeleton count={4} /> : error ? <ErrorState message={error} retry={fetchWishlist} /> : products.length ? <div className="product-grid">{products.map((product) => <ProductCard key={product.id} product={product} onWishlistChange={fetchWishlist} />)}</div> : <EmptyState title="NOTHING SAVED YET" copy="Tap the heart on a pair you don't want to lose." action={<Link className="button dark" to="/shop">Find your next pair</Link>} />}</div>;
 }

@@ -323,7 +323,22 @@ img { max-width: 100%; }
 .auth-visual h1 { font-size: clamp(3rem, 5vw, 6rem); line-height: .85; letter-spacing: -.06em; margin: .8rem 0; }
 .auth-visual p { color: var(--accent); font-size: 10px; letter-spacing: .16em; }
 .auth-visual span { color: #ccc; }
-.auth-form-wrap { display: grid; place-items: center; padding: 3rem; }
+.auth-form-wrap { display: grid; place-items: center; padding: 3rem; position: relative; }
+.auth-loading-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ff4d23, #ff8a65, #ff4d23);
+  background-size: 200% 100%;
+  animation: authBarRun 1.4s ease-in-out infinite;
+  z-index: 10;
+}
+@keyframes authBarRun {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 .auth-form { width: min(410px, 100%); }
 .auth-form h2 { font-size: 2.6rem; letter-spacing: -.05em; margin: .8rem 0; }
 .auth-form > p:not(.eyebrow) { color: var(--muted); font-size: 12px; }
@@ -2340,7 +2355,80 @@ td select { padding: .4rem; border: 1px solid var(--line); background: white; }
   .stats-band article { border-right: 0; border-bottom: 1px solid var(--line); }
 }
 
+/* ==========================================================================
+   Luxury Skeleton Loading & Shimmer System
+   ========================================================================== */
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #e6e3dd;
+  border-radius: 2px;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+.skeleton-dark {
+  background: #1c1c1c;
+}
+
+.skeleton-dark::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 100%
+  );
+}
+
+.skeleton-accent {
+  background: rgba(255, 77, 35, 0.22);
+}
+
+.skeleton-accent::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+}
+
+@keyframes skeletonShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-card {
+  pointer-events: none;
+}
+
+.skeleton-media {
+  background: #e4e2de;
+  position: relative;
+}
+
+.skeleton-stats-band article {
+  padding: 2.2rem 1.8rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none !important;
+  }
   .page-enter, .sv-reveal, .promo-track, .sv-marquee-track, .gallery-main img, .gallery-float-active, .gallery-glint, .cart-toast, .shop-hero h1, .not-found h1, .page-title h1, .about-hero h1, .catalog-results .product-grid .product-card, .aero-card, .text-shimmer, .final-cta::before, .footer-grid a, .footer-grid p {
     animation: none !important;
     transition: none !important;

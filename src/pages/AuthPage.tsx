@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Eye, EyeOff, KeyRound, RefreshCw } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, KeyRound, LoaderCircle, RefreshCw } from 'lucide-react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import emailjs from '@emailjs/browser';
 import supabase from '../lib/supabase';
@@ -233,6 +233,7 @@ export default function AuthPage() {
       </div>
 
       <section className="auth-form-wrap">
+        {busy && <div className="auth-loading-bar" aria-hidden="true" />}
         <div className="auth-form">
           <p className="eyebrow accent">SOLEVAULT MEMBERSHIP</p>
 
@@ -264,8 +265,16 @@ export default function AuthPage() {
                 {message && <p className="form-message success"   style={{ marginTop: '0.75rem' }}>{message}</p>}
 
                 <button className="button dark full" disabled={busy || otpInput.length !== 6} style={{ marginTop: '1rem' }}>
-                  {busy ? 'Verifying…' : 'Verify & Enter Vault'}
-                  <KeyRound size={16} />
+                  {busy ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <LoaderCircle className="spin" size={16} /> Verifying…
+                    </span>
+                  ) : (
+                    <>
+                      Verify & Enter Vault
+                      <KeyRound size={16} />
+                    </>
+                  )}
                 </button>
               </form>
 
@@ -281,7 +290,7 @@ export default function AuthPage() {
                     fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem',
                   }}
                 >
-                  <RefreshCw size={13} />
+                  <RefreshCw size={13} className={busy ? 'spin' : ''} />
                   {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
                 </button>
 
@@ -335,15 +344,33 @@ export default function AuthPage() {
                 {message && <p className="form-message success">{message}</p>}
 
                 <button className="button dark full" disabled={busy || cooldown > 0}>
-                  {busy ? 'Please wait…' : cooldown > 0 ? `Try again in ${cooldown}s` : signUp ? 'Send verification code' : 'Sign in'}
-                  <ArrowRight />
+                  {busy ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <LoaderCircle className="spin" size={16} /> {signUp ? 'Sending code…' : 'Signing in…'}
+                    </span>
+                  ) : cooldown > 0 ? (
+                    `Try again in ${cooldown}s`
+                  ) : (
+                    <>
+                      {signUp ? 'Send verification code' : 'Sign in'}
+                      <ArrowRight />
+                    </>
+                  )}
                 </button>
               </form>
 
               <div className="or"><span>or</span></div>
 
               <button type="button" className="google-button" onClick={handleGoogle} disabled={busy}>
-                G <span>{busy ? 'Connecting to Google…' : 'Continue with Google'}</span>
+                {busy ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <LoaderCircle className="spin" size={16} /> Connecting to Google…
+                  </span>
+                ) : (
+                  <>
+                    G <span>Continue with Google</span>
+                  </>
+                )}
               </button>
 
               <p className="auth-switch">

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Check, PackageCheck, ArrowRight, RefreshCcw, Clock3, XCircle } from 'lucide-react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { authHeaders, money } from '../lib/format';
-import { LoadingState } from '../components/StatePanel';
+import { OrderConfirmationSkeleton } from '../components/ui/Skeleton';
 import { useCart } from '../contexts/CartContext';
 import { useSEOMeta } from '../hooks/useSEOMeta';
 import ReceiptPrinterAnimation from '../components/ReceiptPrinterAnimation';
@@ -72,7 +72,7 @@ export default function OrderConfirmationPage() {
     return () => window.clearInterval(timer);
   }, [order?.payment_status, targetId]);
 
-  if (loading) return <div className="page-shell"><LoadingState label="Confirming payment with the server" /></div>;
+  if (loading) return <OrderConfirmationSkeleton />;
 
   const paid = order?.payment_status === 'PAID';
   const failed = ['FAILED', 'CANCELLED', 'EXPIRED'].includes(String(order?.payment_status));
