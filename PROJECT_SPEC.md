@@ -66,7 +66,7 @@ shoe-payment/
 │   ├── payments.js               # Payment reconciliation & admin refund triggers
 │   ├── products.js               # Catalog search, filtering, and single-item lookup
 │   ├── storefront.js             # Aggregated home page data (brands, categories, deals)
-│   ├── users.js                  # User profile management
+│   ├── users.js                  # User profile management, email check, and password reset
 │   └── wishlist.js               # User wishlist operations
 │
 ├── public/                       # Static Assets
@@ -116,10 +116,10 @@ shoe-payment/
 │   │   └── supabase.ts           # Supabase client instantiation
 │   ├── pages/                    # 18 Application Route Pages
 │   │   ├── AboutPage.tsx         # Brand story & authenticity pledge
-│   │   ├── AccountPage.tsx       # Member Vault (Profile, Orders, Addresses, Wishlist)
+│   │   ├── AccountPage.tsx       # Member Vault (Profile, Password Reset, Orders, Addresses, Wishlist)
 │   │   ├── AdminPage.tsx         # Operations Console (Products, Orders, Payments, Users)
 │   │   ├── AeroGalleryPage.tsx   # 3D Archival Exhibition Gallery
-│   │   ├── AuthPage.tsx          # Login / Signup / EmailJS 6-Digit OTP Verification
+│   │   ├── AuthPage.tsx          # Login / Signup / Forgot Password / EmailJS 6-Digit OTP Verification
 │   │   ├── CartPage.tsx          # Shopping Bag & Order Summary
 │   │   ├── CheckoutPage.tsx      # Cashfree UPI Intent & Address Checkout Form
 │   │   ├── FAQsPage.tsx          # Accordion FAQ guide
@@ -229,13 +229,9 @@ All routes use React `lazy()` with dedicated per-route `<Suspense fallback={<Bes
 </Routes>
 ```
 
-### Route Guards (`src/components/ProtectedRoute.tsx`)
-- **`ProtectedRoute`**: Inspects `useAuth()`. If loading, renders `<AccountPageSkeleton />`. If unauthenticated, navigates to `/login` preserving `state: { from: location.pathname }`.
-- **`AdminRoute`**: Inspects `profile?.role === 'admin'`. If loading, renders `<AdminPageSkeleton />`. If not admin, navigates to `/account`.
-
 ---
 
-## 6. Global State Management
+## 6. Global State & Authentication Flows
 
 ### 1. `AuthContext` (`src/contexts/AuthContext.tsx`)
 - **State**: `user` (Supabase User), `profile` (Solevault Profile with `role: 'customer' | 'admin'`), `loading` (boolean).
@@ -243,7 +239,17 @@ All routes use React `lazy()` with dedicated per-route `<Suspense fallback={<Bes
   - `refreshProfile()`: Fetches `/api/users?profile=true` using Bearer JWT.
   - Supabase Auth Event Listener: Auto-refreshes on `SIGNED_IN`, `SIGNED_OUT`, `USER_UPDATED`.
 - **Google OAuth**: Integrated via `src/lib/googleAuth.ts` invoking `supabase.auth.signInWithOAuth({ provider: 'google' })`.
-- **EmailJS OTP Flow**: `AuthPage.tsx` generates a secure 6-digit code, delivers it via EmailJS template, verifies within a 10-minute expiry window, and creates the account via Supabase.
+- **EmailJS 6-Digit OTP Flows (`src/pages/AuthPage.tsx`)**:
+  - **Signup Verification**: Generates a 6-digit numeric OTP, delivers it via EmailJS template (`template_k4i8h2k`), verifies within a 10-minute expiry window, and creates the account via Supabase.
+  - **Forgot & Reset Password Flow**:
+    1. User submits registered email.
+    2. Endpoint `/api/users?action=check_email` verifies user existence.
+    3. 6-digit cryptographic OTP is sent via EmailJS to the user's email.
+    4. User enters 6-digit code on the verification screen with active countdown timer & resend controls.
+    5. User sets a new secure password (min 6 characters).
+    6. Endpoint `/api/users?action=reset_password` updates the password in Supabase Auth and logs the user in immediately.
+  - **In-App Password Management (`src/pages/AccountPage.tsx`)**:
+    - Authenticated members can update their password directly in the Security tab using `supabase.auth.updateUser({ password: newPassword })`.
 
 ### 2. `CartContext` (`src/contexts/CartContext.tsx`)
 - **State**: `items` (array of `{ product: Product, size: string, quantity: number }`), persisted to `localStorage` under `solevault-cart-v1`.
@@ -262,11 +268,6 @@ All routes use React `lazy()` with dedicated per-route `<Suspense fallback={<Bes
 
 All APIs reside in `/api` and are served as serverless Node.js endpoints.
 
-### API Standards
-- **Authentication**: JWT token passed in `Authorization: Bearer <token>`. Helper `api/_lib/auth.js` verifies the session against Supabase.
-- **Rate Limiting**: `api/_lib/rateLimit.js` protects sensitive endpoints (orders, webhooks, auth) using Upstash Redis.
-- **No Secret Exposure**: All Cashfree and Supabase Service Role credentials reside solely in server environment variables.
-
 ### Endpoints Inventory
 | Endpoint | Method | Purpose | Security & Logic |
 | :--- | :--- | :--- | :--- |
@@ -280,7 +281,7 @@ All APIs reside in `/api` and are served as serverless Node.js endpoints.
 | `/api/cashfree-webhook` | `POST` | Cashfree Webhook | Verifies HMAC-SHA256 signature using `x-webhook-timestamp` and raw body. Idempotent settlement. |
 | `/api/addresses` | `GET/POST/DELETE` | User address book | Bound to authenticated `user.id`. |
 | `/api/wishlist` | `GET/POST/DELETE` | Saved shoes list | Bound to authenticated `user.id`. |
-| `/api/users` | `GET/PUT` | Profile updates | Updates `full_name`, `phone`, fetches role. |
+| `/api/users` | `GET/POST/PUT` | Profiles, Email check & Password Reset | Public `POST ?action=reset_password` & `POST ?action=check_email`. Authenticated `GET/PUT` for profile management. |
 
 ---
 
