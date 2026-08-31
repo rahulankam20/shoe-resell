@@ -3,10 +3,55 @@ import { applySecurityHeaders } from './_lib/http.js';
 import { requireUser, isAdmin } from './_lib/auth.js';
 
 export default async function handler(req, res) {
-  applySecurityHeaders(req, res, 'GET, PUT, OPTIONS');
+  applySecurityHeaders(req, res, 'GET, POST, PUT, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
+    // ── Public Unauthenticated Endpoints (Reset Password & Check Email) ──
+    if (req.method === 'POST') {
+      const action = req.query?.action || req.body?.action;
+
+      if (action === 'check_email') {
+        const email = String(req.body?.email || '').trim().toLowerCase();
+        if (!/^\S+@\S+\.\S+$/.test(email)) {
+          return res.status(400).json({ error: 'Please enter a valid email address' });
+        }
+        const { data: profile } = await supabase.from('profiles').select('id, email, full_name').ilike('email', email).maybeSingle();
+        if (!profile) {
+          return res.status(404).json({ error: 'No SOLEVAULT account found with this email address' });
+        }
+        return res.status(200).json({ exists: true, name: profile.full_name || 'Member' });
+      }
+
+      if (action === 'reset_password') {
+        const email = String(req.body?.email || '').trim().toLowerCase();
+        const newPassword = String(req.body?.password || '');
+
+        if (!/^\S+@\S+\.\S+$/.test(email)) {
+          return res.status(400).json({ error: 'Please enter a valid email address' });
+        }
+        if (newPassword.length < 6) {
+          return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+        }
+
+        const { data: profile, error: pErr } = await supabase.from('profiles').select('id, email').ilike('email', email).maybeSingle();
+        if (pErr || !profile) {
+          return res.status(404).json({ error: 'No account found with this email address' });
+        }
+
+        if (supabase.auth?.admin?.updateUserById) {
+          const { error: authErr } = await supabase.auth.admin.updateUserById(profile.id, {
+            password: newPassword,
+          });
+          if (authErr) throw authErr;
+        }
+
+        return res.status(200).json({ success: true, message: 'Password has been updated successfully' });
+      }
+
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+
     const user = await requireUser(req, res);
     if (!user) return;
 
