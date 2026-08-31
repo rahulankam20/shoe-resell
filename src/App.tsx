@@ -14,6 +14,8 @@ import {
   AdminPageSkeleton,
   OrderConfirmationSkeleton,
   AuthPageSkeleton,
+  CartPageSkeleton,
+  CheckoutPageSkeleton,
 } from './components/ui/Skeleton';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -69,7 +71,7 @@ export default function App() {
               <Route
                 path="cart"
                 element={
-                  <Suspense fallback={<div className="page-shell" />}>
+                  <Suspense fallback={<CartPageSkeleton />}>
                     <CartPage />
                   </Suspense>
                 }
@@ -96,7 +98,7 @@ export default function App() {
                 path="checkout"
                 element={
                   <ProtectedRoute>
-                    <Suspense fallback={<div className="page-shell" />}>
+                    <Suspense fallback={<CheckoutPageSkeleton />}>
                       <CheckoutPage />
                     </Suspense>
                   </ProtectedRoute>
