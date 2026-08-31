@@ -12,7 +12,8 @@ import {
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Reveal from '../components/motion/Reveal';
 import MagneticButton from '../components/ui/MagneticButton';
-import { ErrorState, LoadingState } from '../components/StatePanel';
+import { ErrorState } from '../components/StatePanel';
+import { ProductPageSkeleton } from '../components/ui/Skeleton';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { authHeaders, money } from '../lib/format';
@@ -65,11 +66,7 @@ export default function ProductPage() {
   }, [slug]);
 
   if (loading) {
-    return (
-      <div className="page-shell">
-        <LoadingState label="Opening the product vault" />
-      </div>
-    );
+    return <ProductPageSkeleton />;
   }
 
   if (error || !product) {

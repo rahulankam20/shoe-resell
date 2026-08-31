@@ -4,7 +4,17 @@ import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import Layout from './components/Layout';
 import { AdminRoute, ProtectedRoute } from './components/ProtectedRoute';
-import { LoadingState } from './components/StatePanel';
+import {
+  HomePageSkeleton,
+  ShopPageSkeleton,
+  ProductPageSkeleton,
+  WishlistPageSkeleton,
+  AeroGallerySkeleton,
+  AccountPageSkeleton,
+  AdminPageSkeleton,
+  OrderConfirmationSkeleton,
+  AuthPageSkeleton,
+} from './components/ui/Skeleton';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ShopPage = lazy(() => import('./pages/ShopPage'));
@@ -30,65 +40,170 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <Suspense
-            fallback={
-              <main className="page-shell">
-                <LoadingState />
-              </main>
-            }
-          >
-            <Routes>
-              <Route element={<Layout />}>
-                <Route index element={<HomePage />} />
-                <Route path="shop" element={<ShopPage />} />
-                <Route path="product/:slug" element={<ProductPage />} />
-                <Route path="cart" element={<CartPage />} />
-                <Route path="login" element={<AuthPage />} />
-                <Route
-                  path="wishlist"
-                  element={
-                    <ProtectedRoute>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route
+                index
+                element={
+                  <Suspense fallback={<HomePageSkeleton />}>
+                    <HomePage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="shop"
+                element={
+                  <Suspense fallback={<ShopPageSkeleton />}>
+                    <ShopPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="product/:slug"
+                element={
+                  <Suspense fallback={<ProductPageSkeleton />}>
+                    <ProductPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="cart"
+                element={
+                  <Suspense fallback={<div className="page-shell" />}>
+                    <CartPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="login"
+                element={
+                  <Suspense fallback={<AuthPageSkeleton />}>
+                    <AuthPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="wishlist"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<WishlistPageSkeleton />}>
                       <WishlistPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="checkout"
-                  element={
-                    <ProtectedRoute>
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="checkout"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<div className="page-shell" />}>
                       <CheckoutPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="order-confirmation/:id" element={<OrderConfirmationPage />} />
-                <Route
-                  path="account"
-                  element={
-                    <ProtectedRoute>
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="order-confirmation/:id"
+                element={
+                  <Suspense fallback={<OrderConfirmationSkeleton />}>
+                    <OrderConfirmationPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="account"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<AccountPageSkeleton />}>
                       <AccountPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="admin"
-                  element={
-                    <AdminRoute>
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="admin"
+                element={
+                  <AdminRoute>
+                    <Suspense fallback={<AdminPageSkeleton />}>
                       <AdminPage />
-                    </AdminRoute>
-                  }
-                />
-                <Route path="about" element={<AboutPage />} />
-                <Route path="faqs" element={<FAQsPage />} />
-                <Route path="gallery" element={<AeroGalleryPage />} />
-                <Route path="aero-gallery" element={<AeroGalleryPage />} />
-                <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
-                <Route path="terms-of-service" element={<TermsOfServicePage />} />
-                <Route path="refund-policy" element={<RefundPolicyPage />} />
-                <Route path="shipping-policy" element={<ShippingPolicyPage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Route>
-            </Routes>
-          </Suspense>
+                    </Suspense>
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="about"
+                element={
+                  <Suspense fallback={<div className="page-shell" />}>
+                    <AboutPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="faqs"
+                element={
+                  <Suspense fallback={<div className="page-shell" />}>
+                    <FAQsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="gallery"
+                element={
+                  <Suspense fallback={<AeroGallerySkeleton count={6} />}>
+                    <AeroGalleryPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="aero-gallery"
+                element={
+                  <Suspense fallback={<AeroGallerySkeleton count={6} />}>
+                    <AeroGalleryPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="privacy-policy"
+                element={
+                  <Suspense fallback={<div className="page-shell" />}>
+                    <PrivacyPolicyPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="terms-of-service"
+                element={
+                  <Suspense fallback={<div className="page-shell" />}>
+                    <TermsOfServicePage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="refund-policy"
+                element={
+                  <Suspense fallback={<div className="page-shell" />}>
+                    <RefundPolicyPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="shipping-policy"
+                element={
+                  <Suspense fallback={<div className="page-shell" />}>
+                    <ShippingPolicyPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="*"
+                element={
+                  <Suspense fallback={<div className="page-shell" />}>
+                    <NotFoundPage />
+                  </Suspense>
+                }
+              />
+            </Route>
+          </Routes>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

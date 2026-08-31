@@ -3,7 +3,8 @@ import { ArrowRight, BadgeCheck, Box, CreditCard, Gem, SearchCheck, ShieldCheck 
 import { Link } from 'react-router-dom';
 import HeroScrollExperience from '../components/HeroScrollExperience';
 import ProductCard from '../components/ProductCard';
-import { ErrorState, LoadingState } from '../components/StatePanel';
+import { ErrorState } from '../components/StatePanel';
+import { StorefrontContentSkeleton } from '../components/ui/Skeleton';
 import Marquee from '../components/motion/Marquee';
 import HomeScrollScenes from '../components/motion/HomeScrollScenes';
 import AnimatedSection, { AnimatedCounter, ParallaxLayer } from '../components/ui/AnimatedSection';
@@ -99,7 +100,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {loading && <LoadingState label="Curating the collection" />}
+        {loading && <StorefrontContentSkeleton />}
         {error && <ErrorState message={error} retry={fetchStorefront} />}
 
         {data && (
