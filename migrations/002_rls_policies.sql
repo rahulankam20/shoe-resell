@@ -30,16 +30,15 @@ ALTER TABLE addresses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wishlists ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
--- 2. profiles: users can read/update their own; admins can read all
+-- 2. profiles: users can read their own row; all writes go through the API
+--    (service role). Self update/insert policies were removed because they let
+--    a user set their own role to 'admin' (see 003_lock_profile_role.sql).
 -- ============================================================================
 DROP POLICY IF EXISTS "profiles_self_read" ON profiles;
 CREATE POLICY "profiles_self_read" ON profiles FOR SELECT USING (auth.uid()::text = id);
 
 DROP POLICY IF EXISTS "profiles_self_update" ON profiles;
-CREATE POLICY "profiles_self_update" ON profiles FOR UPDATE USING (auth.uid()::text = id) WITH CHECK (auth.uid()::text = id);
-
 DROP POLICY IF EXISTS "profiles_self_insert" ON profiles;
-CREATE POLICY "profiles_self_insert" ON profiles FOR INSERT WITH CHECK (auth.uid()::text = id);
 
 -- ============================================================================
 -- 3. products: anyone can read; only service role (backend) can write

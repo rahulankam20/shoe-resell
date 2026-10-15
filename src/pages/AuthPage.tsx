@@ -19,14 +19,28 @@ const generateOtp = () =>
 const formatTime = (date: Date) =>
   date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-type AuthMode = 'signin' | 'signup' | 'verify_signup_otp' | 'forgot' | 'verify_reset_otp' | 'new_password';
+// Supabase password-recovery emails link back to /login?mode=recovery (see handleForgotPassword).
+const isRecoveryLink = () => new URLSearchParams(window.location.search).get('mode') === 'recovery';
+
+// Expired or already-used recovery links come back with an error in the URL hash or query.
+const recoveryLinkError = () => {
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const query = new URLSearchParams(window.location.search);
+  return hash.get('error_description') || query.get('error_description') || '';
+};
+
+type AuthMode = 'signin' | 'signup' | 'verify_signup_otp' | 'forgot' | 'new_password';
 
 export default function AuthPage() {
-  const [mode, setMode] = useState<AuthMode>('signin');
+  const [linkError, setLinkError] = useState(recoveryLinkError);
+  const [mode, setMode] = useState<AuthMode>(() => {
+    if (!isRecoveryLink()) return 'signin';
+    return linkError ? 'forgot' : 'new_password';
+  });
 
   useSEOMeta({
     title:
-      mode === 'verify_signup_otp' || mode === 'verify_reset_otp'
+      mode === 'verify_signup_otp'
         ? 'Verify Code | SOLEVAULT'
         : mode === 'forgot'
         ? 'Forgot Password | SOLEVAULT'
@@ -81,7 +95,8 @@ export default function AuthPage() {
     return () => clearInterval(t);
   }, [resendCooldown]);
 
-  if (user) return <Navigate to={redirectTo} replace />;
+  // A recovery link signs the user in; keep them here until the new password is set.
+  if (user && mode !== 'new_password') return <Navigate to={redirectTo} replace />;
 
   // ── Send OTP email via EmailJS ────────────────────────────────────────────
   const sendOtp = async (targetEmail: string, userName: string, otp: string, expiry: Date) => {
@@ -192,73 +207,38 @@ export default function AuthPage() {
     }
   };
 
-  // ── Forgot Password: Check account & send OTP ─────────────────────────────
+  // ── Forgot Password: email a Supabase recovery link ───────────────────────
+  // The reply is identical whether or not the account exists, so this form
+  // cannot be used to discover registered emails.
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy || cooldown > 0) return;
 
     setError('');
     setMessage('');
+    setLinkError('');
 
     const cleanEmail = email.trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) return setError('Enter a valid email address');
 
     setBusy(true);
     try {
-      // Check if account exists
-      const checkRes = await fetch('/api/users?action=check_email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail }),
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: `${window.location.origin}/login?mode=recovery`,
       });
-      const checkData = await checkRes.json();
-      if (!checkRes.ok) throw new Error(checkData.error || 'No account found with this email');
-
-      const otp = generateOtp();
-      const expiry = new Date(Date.now() + 10 * 60 * 1000);
-
-      await sendOtp(cleanEmail, checkData.name || 'Member', otp, expiry);
-
-      otpRef.current = otp;
-      expiryRef.current = expiry;
-
-      setMode('verify_reset_otp');
-      setResendCooldown(60);
-      setMessage(`A 6-digit password reset code was sent to ${cleanEmail}.`);
-    } catch (err: any) {
-      setError(err?.message || err?.text || 'Failed to send password reset code. Please try again.');
+      if (resetError?.status === 429) {
+        return setError('Too many reset requests. Please wait a few minutes and try again.');
+      }
+      setCooldown(60);
+      setMessage(`If an account exists for ${cleanEmail}, a password reset link is on its way. Check your inbox and spam folder.`);
+    } catch {
+      setError('Unable to send the reset email right now. Please try again.');
     } finally {
       setBusy(false);
     }
   };
 
-  // ── Verify Reset OTP ──────────────────────────────────────────────────────
-  const verifyResetOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (busy) return;
-
-    const entered = otpInput.trim();
-    if (entered.length !== 6) return setError('Please enter the complete 6-digit code');
-
-    setError('');
-    setMessage('');
-
-    if (!expiryRef.current || new Date() > expiryRef.current) {
-      return setError('Reset code has expired. Please request a new code.');
-    }
-
-    if (entered !== otpRef.current) {
-      return setError('Incorrect code. Please check your email and try again.');
-    }
-
-    // OTP verified! Proceed to set new password
-    setMode('new_password');
-    setPassword('');
-    setConfirmPassword('');
-    setMessage('Email verified. Enter your new password below.');
-  };
-
-  // ── Submit New Password ───────────────────────────────────────────────────
+  // ── Submit New Password (session comes from the recovery link) ───────────
   const handleSetNewPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
@@ -271,28 +251,19 @@ export default function AuthPage() {
 
     setBusy(true);
     try {
-      const resetRes = await fetch('/api/users?action=reset_password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
-      });
-      const resetData = await resetRes.json();
-      if (!resetRes.ok) throw new Error(resetData.error || 'Failed to update password');
-
-      // Auto sign in with new password
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
-      });
-      if (signInErr) {
-        setMode('signin');
-        setMessage('Password updated successfully! Please sign in with your new password.');
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        setMode('forgot');
+        setLinkError('This reset link is invalid or has expired. Request a new one below.');
         return;
       }
 
-      navigate(redirectTo);
-    } catch (err: any) {
-      setError(err?.message || 'Unable to update password. Please try again.');
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) return setError(updateError.message);
+
+      navigate(redirectTo, { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to update password. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -616,7 +587,7 @@ export default function AuthPage() {
           {mode === 'forgot' && (
             <div>
               <h2>RESET PASSWORD</h2>
-              <p>Enter your registered email to receive a 6-digit verification code.</p>
+              <p>Enter your account email and we will send you a link to reset your password.</p>
 
               <form onSubmit={handleForgotPassword}>
                 <label>
@@ -633,19 +604,19 @@ export default function AuthPage() {
                   />
                 </label>
 
-                {error && <p className="form-error" role="alert">{error}</p>}
+                {(error || linkError) && <p className="form-error" role="alert">{error || linkError}</p>}
                 {message && <p className="form-message success">{message}</p>}
 
                 <button className="button dark full" disabled={busy || cooldown > 0}>
                   {busy ? (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <LoaderCircle className="spin" size={16} /> Sending code…
+                      <LoaderCircle className="spin" size={16} /> Sending link…
                     </span>
                   ) : cooldown > 0 ? (
-                    `Try again in ${cooldown}s`
+                    `Resend in ${cooldown}s`
                   ) : (
                     <>
-                      Send reset code
+                      Send reset link
                       <ArrowRight />
                     </>
                   )}
@@ -661,80 +632,11 @@ export default function AuthPage() {
             </div>
           )}
 
-          {/* ── 5. VERIFY RESET OTP SCREEN ── */}
-          {mode === 'verify_reset_otp' && (
-            <div>
-              <h2>VERIFY RESET CODE</h2>
-              <p>Enter the 6-digit reset code sent to <strong>{email}</strong></p>
-
-              <form onSubmit={verifyResetOtp} style={{ marginTop: '1.25rem' }}>
-                <label>
-                  Reset Verification Code
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={6}
-                    value={otpInput}
-                    onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
-                    placeholder="123456"
-                    autoFocus
-                    required
-                    disabled={busy}
-                    style={{ letterSpacing: '8px', fontSize: '1.4rem', fontWeight: 700, textAlign: 'center', marginTop: '0.45rem' }}
-                  />
-                </label>
-
-                {error && <p className="form-error" role="alert" style={{ marginTop: '0.75rem' }}>{error}</p>}
-                {message && <p className="form-message success" style={{ marginTop: '0.75rem' }}>{message}</p>}
-
-                <button className="button dark full" disabled={busy || otpInput.length !== 6} style={{ marginTop: '1rem' }}>
-                  {busy ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <LoaderCircle className="spin" size={16} /> Verifying…
-                    </span>
-                  ) : (
-                    <>
-                      Verify Code
-                      <KeyRound size={16} />
-                    </>
-                  )}
-                </button>
-              </form>
-
-              <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={resendCooldown > 0 || busy}
-                  style={{
-                    background: 'none', border: 'none', fontSize: '0.82rem',
-                    color: resendCooldown > 0 ? 'var(--muted)' : 'var(--accent)',
-                    cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer',
-                    fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem',
-                  }}
-                >
-                  <RefreshCw size={13} className={busy ? 'spin' : ''} />
-                  {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setMode('forgot')}
-                  disabled={busy}
-                  style={{ background: 'none', border: 'none', fontSize: '0.78rem', color: 'var(--muted)', cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                  Change email address
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── 6. CREATE NEW PASSWORD SCREEN ── */}
+          {/* ── 5. CREATE NEW PASSWORD SCREEN (opened from the emailed recovery link) ── */}
           {mode === 'new_password' && (
             <div>
               <h2>CREATE NEW PASSWORD</h2>
-              <p>Set a secure new password for <strong>{email}</strong></p>
+              <p>Set a secure new password for <strong>{user?.email || 'your account'}</strong></p>
 
               <form onSubmit={handleSetNewPassword}>
                 <label>
@@ -796,7 +698,7 @@ export default function AuthPage() {
                     </span>
                   ) : (
                     <>
-                      Update Password & Sign In
+                      Update Password
                       <CheckCircle2 size={16} />
                     </>
                   )}
